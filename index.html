@@ -7,6 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#56c3f0">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Snug</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -206,6 +207,18 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .adfake .k{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a99cc8;font-weight:900}
 .adfake .t{font-family:var(--display);font-size:34px;color:#fff}
 .adfake .cd{font-family:var(--display);font-size:22px;color:#a99cc8}
+/* variety: intro banner, power-up chips, zone progress */
+.intro{position:absolute;left:50%;top:22%;transform:translateX(-50%);width:min(330px,88%);display:grid;justify-items:center;gap:4px;text-align:center;
+  background:var(--paper);border:4px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:22px 14px 12px;animation:popin .35s cubic-bezier(.3,1.5,.5,1)}
+.intro .newtag{position:absolute;top:-18px;font-family:var(--display);font-size:18px;color:#fff;background:var(--pink);border:3px solid var(--ink);border-radius:10px;padding:1px 12px 3px;text-shadow:var(--o2);transform:rotate(-4deg)}
+.intro b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05}
+.intro span{font-weight:900;font-size:15px}
+.pwchips{display:grid;justify-items:end;gap:6px;margin-top:10px}
+.pwchip{display:flex;align-items:center;gap:4px;font-family:var(--display);font-size:16px;background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:1px 8px 2px 4px;box-shadow:0 3px 0 var(--ink)}
+.pwchip .ic{font-size:22px}
+.zonebar{display:grid;gap:4px;text-align:left;font-weight:900;font-size:14px}
+.zonebar b{font-family:var(--display);font-weight:400;font-size:16px}
+.tile .state .ic{display:inline;vertical-align:-2px}
 @media (prefers-reduced-motion:reduce){.holdhint,.logo h1 span{animation:none}*{animation-duration:.01s!important}}
 </style>
 
@@ -229,6 +242,10 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
     <symbol id="i-gates" viewBox="0 0 24 24"><rect x="1.5" y="9" width="8" height="6" rx="3" fill="#ff8fb1" stroke="#2b2040" stroke-width="2"/><rect x="14.5" y="9" width="8" height="6" rx="3" fill="#ff8fb1" stroke="#2b2040" stroke-width="2"/><circle cx="12" cy="12" r="2.3" fill="#ffcf3a" stroke="#2b2040" stroke-width="1.6"/></symbol>
     <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3.5 9h4l5-4.5v15l-5-4.5h-4z" fill="#fff" stroke="#2b2040" stroke-width="2" stroke-linejoin="round"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="#2b2040" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-vib" viewBox="0 0 24 24"><rect x="7.5" y="3" width="9" height="18" rx="2.5" fill="#fff" stroke="#2b2040" stroke-width="2"/><path d="M4 8.5v7M20 8.5v7M1.8 10.5v3M22.2 10.5v3" stroke="#2b2040" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-gem" viewBox="0 0 24 24"><path d="M7 3.5h10l4.5 5.5L12 21 2.5 9z" fill="#5cd6ff" stroke="#2b2040" stroke-width="2" stroke-linejoin="round"/><path d="M2.5 9h19M8.5 9 12 21l3.5-12M7 3.5 8.5 9M17 3.5 15.5 9" fill="none" stroke="#2b2040" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 8.6 7.6 5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 20 5.5v6c0 5-3.6 8.6-8 10-4.4-1.4-8-5-8-10v-6z" fill="#6fd0f7" stroke="#2b2040" stroke-width="2" stroke-linejoin="round"/><path d="M8 11.5l3 3 5-5.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-slow" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8.5" fill="#fff" stroke="#2b2040" stroke-width="2"/><path d="M9.5 2.5h5M12 13V8.5M12 13l3 2" stroke="#2b2040" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-x2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="#ff6f91" stroke="#2b2040" stroke-width="2"/><path d="M6.8 9.2l4 5.6M10.8 9.2l-4 5.6M13.5 10.2a2 2 0 1 1 3 1.7L13.5 15h4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="#fff" stroke-width="4" stroke-linecap="round"/></symbol>
   </defs>
 </svg>
@@ -265,8 +282,9 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
     <div class="hud passthru">
       <div class="lives" id="pips"><svg class="pip"><use href="#i-drop"/></svg><svg class="pip"><use href="#i-drop"/></svg><svg class="pip"><use href="#i-drop"/></svg></div>
       <div class="score outline" id="score">0</div>
-      <div><div class="mult" id="mult"></div></div>
+      <div><div class="mult" id="mult"></div><div class="pwchips" id="pw"></div></div>
     </div>
+    <div class="intro" id="intro" hidden><span class="newtag">NEW!</span><b id="introT"></b><span id="introS"></span></div>
   </div>
 
   <!-- RESULTS -->
@@ -282,6 +300,7 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
         <div class="stat"><svg class="ic"><use href="#i-star"/></svg><b id="oPerf">0</b><span>Perfects</span></div>
         <div class="stat"><svg class="ic"><use href="#i-coin"/></svg><b id="oCoins">0</b><span>Coins</span></div>
       </div>
+      <div class="zonebar" id="oZone"></div>
     </div>
     <div class="actions">
       <button class="btn yellow wide" id="bDouble"><svg class="ic"><use href="#i-video"/></svg>2× COINS</button>
@@ -332,16 +351,26 @@ const MISSION_POOL=[
  {k:"runs",t:5,rw:20,i:"play",txt:n=>`Play ${n} runs`},
  {k:"coins",t:15,rw:25,i:"coin",txt:n=>`Collect ${n} coins`},
  {k:"squeeze",t:2,rw:30,i:"blob",txt:n=>`Pull off ${n} Squeezes`},
- {k:"gold",t:1,rw:30,i:"coin",txt:()=>`Nail a gold gate`}
+ {k:"gold",t:1,rw:30,i:"coin",txt:()=>`Nail a gold gate`},
+ {k:"smash",t:3,rw:30,i:"gates",txt:n=>`Smash ${n} glass gates`},
+ {k:"gems",t:8,rw:25,i:"gem",txt:n=>`Grab ${n} gems`},
+ {k:"box",t:2,rw:30,i:"gift",txt:n=>`Open ${n} mystery boxes`}
 ];
+// Zones: the sky changes as you climb. Reaching one saves it to your collection.
+const ZONE_AT=[0,25,50,80];
+const zoneOf=p=>ZONE_AT.filter(z=>p>=z).length-1;
+const INTROS={gem:["GEMS!","Grow big between gates to grab them"],glass:["GLASS GATE!","Be BIGGER than the gap to smash it"],
+  box:["MYSTERY BOX!","Fit it PERFECTLY to open the box"],twin:["TWIN GATES!","Two gates close together. Resize fast!"]};
+const POWERS={shield:["SHIELD!","shield"],slow:["SLOW-MO!","slow"],double:["DOUBLE POINTS!","x2"]};
 const STREAK_REWARDS=[10,15,20,25,30,40,50];
 const xpNeed=l=>80+l*40;
 
 // ---------- save ----------
 const DEF={best:0,coins:0,xp:0,level:1,skins:["peach"],skin:"peach",theme:"pond",streak:0,lastDay:null,
-  mDay:null,missions:[],runs:0,sessions:0,sound:true,haptics:true};
+  mDay:null,missions:[],runs:0,sessions:0,sound:true,haptics:true,seen:{},zone:0};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem("snug.v1");if(raw)S=Object.assign({},DEF,JSON.parse(raw))}catch(e){}
+if(!S.seen)S.seen={};
 const save=()=>{try{localStorage.setItem("snug.v1",JSON.stringify(S))}catch(e){}};
 S.sessions++;
 
@@ -378,20 +407,21 @@ window.addEventListener("resize",resize);
 const GROW=140, SHRINK=160, MINF=.3, RAMP=.3, RMIN=12, RMAX=98, BAR_H=24, HOME_R=34; // speed ramps up after each press/release: taps nudge, holds sweep
 let lastHold=false, sinceToggle=0;
 const rateNow=h=>(h?GROW:SHRINK)*(MINF+(1-MINF)*Math.min(1,sinceToggle/RAMP));
-const theme=()=>THEMES.find(t=>t.id===S.theme)||THEMES[0];
+const theme=()=>THEMES[R?R.zone:0]; // the sky follows the zone you've climbed to
 const skin=()=>SKINS.find(s=>s.id===S.skin)||SKINS[0];
 
 // ---------- state ----------
 let state="home", T=0, holding=false, paused=false;
 let R; // run
 let blobR=HOME_R, blobVis=1, squish=0, wob=0, shake=0, freezeUntil=0, flash=0, climb=0;
-let parts=[], pops=[];
+let parts=[], pops=[], zoneT=-9, pwKey="";
 const clouds=[]; for(let i=0;i<7;i++)clouds.push({x:rand(-40,LW+40),y:rand(-40,700),s:rand(.6,1.25),z:rand(.3,1)});
 const stars=[]; for(let i=0;i<40;i++)stars.push({x:Math.random()*LW,y:Math.random()*900,p:Math.random()*6,s:rand(.6,1.8)});
 const sessionStart=performance.now(); let runsSinceInter=0, lastRewardedAt=-1e9;
 
 function newRun(){
-  R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,cont:false,doubled:false,first:S.runs===0,t:0};
+  R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],gems:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,smash:0,gemsGot:0,boxes:0,cont:false,doubled:false,first:S.runs===0,t:0,
+    zone:0,prevZone:0,nextBox:6,lastType:"",pw:{shield:false,slowUntil:0,dblUntil:0}};
   blobR=Math.min(blobR,30); blobVis=1; parts=[]; pops=[]; sinceToggle=0;
   spawnUntilTop(BY-310);
 }
@@ -400,13 +430,14 @@ const spacing=n=> Math.max(190,300-4*n);
 // First five gates teach by play. Gate 1 is wide: players start by holding, so holding all the way = a guaranteed SQUEEZE win.
 const SCRIPT=[190,88,136,70,120];
 
-function makeGate(y){
+function makeGate(y,sp){
   const n=R.n++, prev=R.gates.length?R.gates[R.gates.length-1].base:60;
+  if(sp===undefined)sp=spacing(n);
   let g;
   if(n<SCRIPT.length) g=SCRIPT[n];
   else{
     const k=clamp(n/40,0,1), minG=lerp(70,44,k), maxG=lerp(132,176,k);
-    const dt=spacing(n)/speed(n);
+    const dt=sp/speed(n);
     const reach=2*Math.min(GROW,SHRINK)*Math.max(0,dt-RAMP*(1-MINF)/2)*0.72; // fairness: change must be physically reachable with slack
     const maxDelta=Math.min(28+n*4,135,reach);
     const minDelta=Math.min(18,maxDelta*0.5);              // avoid boring repeats
@@ -414,30 +445,55 @@ function makeGate(y){
     if(prev-maxDelta<minG) dir=1; if(prev+maxDelta>maxG) dir=-1;
     g=clamp(prev+dir*rand(minDelta,maxDelta),minG,maxG);
   }
-  const gold = n>0 && n%10===9;
-  const amp = n>=30 ? Math.min(6+(n-30)*.6,14) : 0;        // "breathing" gates late game
-  R.gates.push({y,base:g,cur:g,amp,ph:Math.random()*6,gold,done:false,n,res:null,resT:0});
+  const type = n>=8 && R.lastType!=="glass" && Math.random()<.16 ? "glass" : "normal";
+  const gold = type==="normal" && n>0 && n%10===9;
+  const box = type==="normal" && !gold && n>=R.nextBox; if(box) R.nextBox=n+9+Math.floor(Math.random()*5);
+  const amp = type==="normal" && n>=30 ? Math.min(6+(n-30)*.6,14) : 0;        // "breathing" gates late game
+  const intro = type==="glass"&&!S.seen.glass ? "glass" : box&&!S.seen.box ? "box" : null;
+  R.lastType=type;
+  R.gates.push({y,base:g,cur:g,amp,ph:Math.random()*6,gold,type,box,intro,done:false,n,res:null,resT:0});
 }
 function spawnUntilTop(firstY){
   if(!R.gates.length) makeGate(firstY);
   let top=R.gates[R.gates.length-1];
-  while(top.y>-80){makeGate(top.y-spacing(R.n));top=R.gates[R.gates.length-1];}
+  while(top.y>-80){
+    let sp=spacing(R.n), twin=false;
+    if(R.n>=15&&!top.twin&&Math.random()<.12){sp=125;twin=true}           // twin pair: second gate arrives fast
+    makeGate(top.y-sp,sp);
+    const g=R.gates[R.gates.length-1];
+    if(twin){g.twin=true;if(!g.intro&&!S.seen.twin)g.intro="twin"}
+    // gem floating between gates, off to one side: only a big blob reaches it
+    if(R.n>4&&!twin&&Math.random()<.5){const firstGem=!S.seen.gem&&!R.gems.some(x=>x.intro);
+      R.gems.push({y:(top.y+g.y)/2,x:LW/2+(Math.random()<.5?-1:1)*rand(42,84),done:false,taken:false,intro:firstGem?"gem":null})}
+    top=g;
+  }
 }
 
 // ---------- judging ----------
 const C_WHITE="#ffffff", C_GOLD="#ffcf3a", C_GOOD="#bfe9ff", C_BAD="#ff6f91";
+const dblOn=()=>T<R.pw.dblUntil;
 function judge(g){
   const gap=g.cur, d=2*blobR, fit=d/gap, early=R.passed<5;
   const tol=early?10:6;
-  if(d>gap+tol){crash(g);return}
+  if(g.intro){S.seen[g.intro]=true;save()}
+  if(g.type!=="glass"&&d>gap+tol){
+    if(R.pw.shield){ // shield pops instead of the blob
+      R.pw.shield=false;R.passed++;R.chain=0;blobR=Math.min(blobR,gap*.45);shake=6;g.broken=true;shatter(g);SFX.squeeze();buzz(30);
+      popup("SHIELD SAVED YOU!",LW/2,BY-blobR-30,C_GOOD,24);updateHud(true);return}
+    crash(g);return}
   R.passed++;
   const pTh=early?0.80:0.84;
-  let label,col,pts=0;
-  if(d>gap-1.5){ // squeeze: tighter than perfect, tiny overlap allowed
-    R.chain++;R.perfects++;R.squeezes++;pts=5;label="SQUEEZE!";col=C_GOLD;SFX.squeeze();buzz(18);burst(g,34,true);flash=.5;
+  let label,col,pts=0,great=false;
+  if(g.type==="glass"){
+    if(d>gap-1.5){R.chain++;R.perfects++;R.smash++;pts=4;label="SMASH!";col=C_GOOD;great=true;g.broken=true;shatter(g);
+      tone(1200,.08,"square",.06,.5);tone(note(R.chain+1),.2,"triangle",.18,0,.04);buzz(20);shake=4;if(R.glow<3)R.glow++}
+    else if(fit>=0.60){R.chain=0;pts=1;label="BIGGER!";col=C_GOOD;SFX.good()}
+    else{R.chain=0;label="LOOSE";col=C_BAD;SFX.loose();buzz(25);R.glow--}
+  } else if(d>gap-1.5){ // squeeze: tighter than perfect, tiny overlap allowed
+    R.chain++;R.perfects++;R.squeezes++;pts=5;label="SQUEEZE!";col=C_GOLD;great=true;SFX.squeeze();buzz(18);burst(g,34,true);flash=.5;
     if(R.glow<3)R.glow++;
   } else if(fit>=pTh){
-    R.chain++;R.perfects++;pts=3;label=R.chain>=3?`PERFECT ×${R.chain}`:"PERFECT!";col=g.gold?C_GOLD:C_WHITE;SFX.perfect(R.chain-1);buzz(10);burst(g,20,false);
+    R.chain++;R.perfects++;pts=3;label=R.chain>=3?`PERFECT ×${R.chain}`:"PERFECT!";col=g.gold?C_GOLD:C_WHITE;great=true;SFX.perfect(R.chain-1);buzz(10);burst(g,20,false);
     if(R.glow<3)R.glow++;
   } else if(fit>=0.60){
     R.chain=0;pts=1;label="GOOD";col=C_GOOD;SFX.good();burst(g,6,false);
@@ -446,13 +502,28 @@ function judge(g){
   }
   R.bestChain=Math.max(R.bestChain,R.chain);
   const mult=1+Math.min(4,Math.floor(R.chain/3));
-  R.score+=pts*mult;
-  if(pts>=3){const c=g.gold?5:1;R.coins+=c;if(g.gold){R.gold++;label="GOLD! +5";SFX.coin()} else if(R.chain%3===0)SFX.coin();}
+  R.score+=pts*mult*(dblOn()?2:1);
+  if(great&&g.type!=="glass"){const c=g.gold?5:1;R.coins+=c;if(g.gold){R.gold++;label="GOLD! +5";SFX.coin()} else if(R.chain%3===0)SFX.coin();}
   g.res=label; g.resT=T;
   popup(label,LW/2,BY-blobR-30,col,label.length>9?26:32);
-  if(R.passed===10||R.passed===25||R.passed===50){popup(`${R.passed} GATES!`,LW/2,BY-150,C_GOLD,38);SFX.reward();confetti()}
+  if(g.box){if(great)openBox();else popup("BOX MISSED",LW/2,BY-blobR-66,C_BAD,20)}
+  if(R.passed===10||R.passed===50){popup(`${R.passed} GATES!`,LW/2,BY-150,C_GOLD,38);SFX.reward();confetti()}
+  const z=zoneOf(R.passed);
+  if(z>R.zone){R.prevZone=R.zone;R.zone=z;zoneT=T;confetti();SFX.reward();
+    popup(`ZONE ${z+1}`,LW/2,LH*.3-30,"#ffffff",26);popup(THEMES[z].name.toUpperCase(),LW/2,LH*.3+6,C_GOLD,44);
+    if(z>(S.zone||0)){S.zone=z;save();setTimeout(()=>toast(`New zone discovered: ${THEMES[z].name}!`,"star"),900)}}
   updateHud(true);
   if(R.glow<=0){fadeOut()}
+}
+function openBox(){
+  const keys=Object.keys(POWERS),k=keys[Math.floor(Math.random()*keys.length)];R.boxes++;
+  if(k==="shield")R.pw.shield=true; else if(k==="slow")R.pw.slowUntil=T+4; else R.pw.dblUntil=T+6;
+  popup(POWERS[k][0],LW/2,BY-blobR-70,C_GOLD,30);SFX.reward();confetti();
+}
+function shatter(g){
+  const half=g.cur/2;
+  for(let i=0;i<26;i++){const left=i%2,x=left?LW/2-half-rand(0,60):LW/2+half+rand(0,60);
+    parts.push({x,y:g.y+rand(-8,8),vx:(left?-1:1)*rand(40,220),vy:rand(-260,-40),life:rand(.5,.9),max:.9,c:g.type==="glass"?"#cfefff":theme().gate,s:rand(4,8),g:800,conf:true,rot:rand(0,6),vr:rand(-12,12)})}
 }
 function crash(g){
   state="dying"; holding=false; shake=14; squish=1; SFX.crash(); buzz([30,40,60]);
@@ -495,13 +566,22 @@ function update(dt){
     if(holding) blobR=Math.min(RMAX,blobR+rate*dt); else blobR=Math.max(RMIN,blobR-rate*dt);
     humSet();
     if(T>=freezeUntil){
-      const v=speed(R.passed);
+      // first-time mechanic: show a banner and slow down while it approaches
+      const iG=R.gates.find(g=>g.intro&&!g.done&&g.y>BY-330), iM=R.gems.find(m=>m.intro&&!m.done&&m.y>BY-330), it=iG||iM;
+      setIntro(it?it.intro:null);
+      const v=speed(R.passed)*(T<R.pw.slowUntil?.6:1)*(it?.55:1);
       climb+=v*dt;
+      for(const m of R.gems){m.y+=v*dt;
+        if(!m.done&&m.y>=BY){m.done=true;if(m.intro){S.seen.gem=true;save()}
+          if(blobR+10>=Math.abs(m.x-LW/2)){m.taken=true;R.gemsGot++;R.coins++;R.score+=dblOn()?4:2;SFX.coin();buzz(8);
+            popup("+GEM",m.x,m.y-26,"#5cd6ff",22);for(let i=0;i<10;i++){const a=rand(0,7);parts.push({x:m.x,y:m.y,vx:Math.cos(a)*160,vy:Math.sin(a)*160,life:.5,max:.5,c:"#5cd6ff",s:4,g:200,star:true,rot:0,vr:6})}updateHud(true)}}}
+      R.gems=R.gems.filter(m=>m.y<LH+40&&!m.taken);
       for(const g of R.gates){g.y+=v*dt; g.cur=g.base+g.amp*Math.sin(T*3+g.ph);
         if(!g.done&&g.y>=BY){g.done=true;judge(g);if(state!=="play")break}}
       R.gates=R.gates.filter(g=>g.y<LH+60);
       if(state==="play")spawnUntilTop();
     }
+    renderPw();
   } else if(state==="home"||state==="over"){
     blobR=lerp(blobR,(state==="home"?HOME_R:26)+Math.sin(T*2)*2,.1); humSet(true);
     climb=Math.max(0,climb-dt*Math.max(300,climb*2.5)); // hills rise back into view
@@ -539,12 +619,15 @@ function hills(th,offset){
   ctx.fillStyle=th.night?"#fff6c8":"#fffaf0";
   for(let i=0;i<7;i++){const x=20+i*52,y=base-92-12*Math.sin(x*.026+4)-6*Math.sin(x*.026*2.3+8)+14;ctx.beginPath();ctx.arc(x,y,3,0,7);ctx.fill()}
 }
+function sky(t,a){if(a<=0)return;ctx.globalAlpha=a;const bg=ctx.createLinearGradient(0,0,0,LH);bg.addColorStop(0,t.top);bg.addColorStop(1,t.bot);
+  ctx.fillStyle=bg;ctx.fillRect(-20,-20,LW+40,LH+40);ctx.globalAlpha=1}
 function draw(){
   const th=theme();
   ctx.setTransform(DPR*SC,0,0,DPR*SC,0,0);
   if(shake>0)ctx.translate(rand(-shake,shake)*.4,rand(-shake,shake)*.4);
-  const bg=ctx.createLinearGradient(0,0,0,LH);bg.addColorStop(0,th.top);bg.addColorStop(1,th.bot);
-  ctx.fillStyle=bg;ctx.fillRect(-20,-20,LW+40,LH+40);
+  const zk=R?clamp((T-zoneT)/1.6,0,1):1;
+  if(zk<1)sky(THEMES[R.prevZone],1);
+  sky(th,zk);
   if(th.night)for(const s of stars){ctx.globalAlpha=.4+.6*Math.abs(Math.sin(T*1.5+s.p));ctx.fillStyle="#fff6c8";ctx.fillRect(s.x,s.y,s.s,s.s)}
   ctx.globalAlpha=1;
   // sun / moon (sinks as you climb)
@@ -561,8 +644,11 @@ function draw(){
   if((state==="home"||state==="over")&&climb<60){ctx.fillStyle="rgba(43,32,64,.2)";ctx.beginPath();ctx.ellipse(LW/2,BY+blobR+16,blobR*.9,7,0,0,7);ctx.fill()}
   // home: pulsing touch ring around the blob
   if(state==="home"){const k=(T*1.1)%1;ctx.strokeStyle=`rgba(255,255,255,${(1-k)*.9})`;ctx.lineWidth=4;ctx.beginPath();ctx.arc(LW/2,BY,blobR+10+k*40,0,7);ctx.stroke()}
-  if(R&&state!=="home") for(const g of R.gates) drawGate(g,th);
+  if(R&&state!=="home"){for(const m of R.gems)drawGem(m);for(const g of R.gates) drawGate(g,th)}
   drawBlob();
+  if(R&&R.pw.shield&&(state==="play"||state==="dying")){const r=blobR+10+Math.sin(T*6)*2;ctx.fillStyle="rgba(111,208,247,.22)";ctx.beginPath();ctx.arc(LW/2,BY,r,0,7);ctx.fill();
+    ctx.lineWidth=3;ctx.strokeStyle="rgba(43,32,64,.8)";ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.beginPath();ctx.arc(LW/2,BY,r-5,-2.4,-1.6);ctx.stroke()}
+  if(R&&T<R.pw.slowUntil&&state==="play"){ctx.fillStyle="rgba(63,180,240,.10)";ctx.fillRect(0,0,LW,LH)}
   // particles
   for(const p of parts){const a=clamp(p.life/p.max,0,1);
     if(p.ring){ctx.strokeStyle=`rgba(255,255,255,${a*.9})`;ctx.lineWidth=5*a+1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.stroke();continue}
@@ -582,7 +668,20 @@ function draw(){
   if(paused){ctx.fillStyle="rgba(43,32,64,.55)";ctx.fillRect(0,0,LW,LH);strokeText("PAUSED",LW/2,LH/2-10,48,"#ffffff",8);strokeText("Hold to resume",LW/2,LH/2+36,20,"#ffffff",5)}
 }
 function starPath(c,r){c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rad=i%2?r*.45:r;c.lineTo(Math.cos(a)*rad,Math.sin(a)*rad)}c.closePath()}
+function drawGem(m){
+  if(m.taken)return;const bob=Math.sin(T*4+m.x)*3;
+  ctx.save();ctx.translate(m.x,m.y+bob);
+  ctx.fillStyle="rgba(92,214,255,.25)";ctx.beginPath();ctx.arc(0,0,16+Math.sin(T*5)*2,0,7);ctx.fill();
+  ctx.beginPath();ctx.moveTo(-6,-9);ctx.lineTo(6,-9);ctx.lineTo(11,-3);ctx.lineTo(0,11);ctx.lineTo(-11,-3);ctx.closePath();
+  ctx.fillStyle="#5cd6ff";ctx.fill();ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.strokeStyle=INK;ctx.stroke();
+  ctx.fillStyle="#fff";ctx.globalAlpha=.8;ctx.beginPath();ctx.moveTo(-5,-6);ctx.lineTo(-1,-6);ctx.lineTo(-4,-1);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+  ctx.restore();
+  // reach hint: dashed arc showing how big you need to be
+  if(!m.done&&m.y>BY-200&&m.y<BY){ctx.setLineDash([3,6]);ctx.lineWidth=2;ctx.strokeStyle="rgba(255,255,255,.5)";ctx.beginPath();ctx.arc(LW/2,m.y,Math.abs(m.x-LW/2)-8,0,7);ctx.stroke();ctx.setLineDash([])}
+}
 function drawGate(g,th){
+  if(g.broken)return;
+  if(g.type==="glass")return drawGlass(g);
   const half=g.cur/2, cx=LW/2, y=g.y, col=g.gold?"#ffd84a":th.gate, dk=g.gold?"#d19a10":th.gateD;
   // ghost ring: shows the perfect size; fades as the player gets better
   const ghostA = R.passed<6 ? .9 : R.passed<20 ? .55 : .32;
@@ -606,6 +705,28 @@ function drawGate(g,th){
   for(const bx of [lw-2,rx+2]){ctx.fillStyle="#fffaf0";ctx.beginPath();ctx.arc(bx,y,9,0,7);ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=INK;ctx.stroke();
     ctx.fillStyle=g.gold?"#ffd84a":col;ctx.beginPath();ctx.arc(bx,y,3.5,0,7);ctx.fill()}
   if(g.gold&&!g.done){ctx.save();ctx.translate(cx,y);ctx.rotate(T*2);ctx.fillStyle="#ffd84a";ctx.strokeStyle=INK;ctx.lineWidth=2;starPath(ctx,9);ctx.fill();ctx.stroke();ctx.restore()}
+  if(g.box&&!g.done)drawBox(cx,y);
+}
+function drawBox(x,y){
+  ctx.save();ctx.translate(x,y+Math.sin(T*5)*2);ctx.rotate(Math.sin(T*3)*.12);
+  ctx.fillStyle="#ffcf3a";rr(ctx,-11,-11,22,22,5);ctx.fill();ctx.fillStyle="#d18f00";ctx.fillRect(-11,5,22,6);
+  ctx.lineWidth=2.5;ctx.strokeStyle=INK;rr(ctx,-11,-11,22,22,5);ctx.stroke();
+  ctx.font=`400 17px ${FONT}`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#fff";ctx.lineWidth=3;ctx.strokeText("?",0,0);ctx.fillText("?",0,0);
+  ctx.restore();
+}
+function drawGlass(g){
+  const half=g.cur/2, cx=LW/2, y=g.y, top=y-BAR_H/2;
+  // ghost ring is drawn BIGGER than the gap: be bigger to smash
+  if(!g.done&&y>-40){const a=R.passed<20?.85:.5;ctx.setLineDash([7,7]);ctx.lineWidth=3;ctx.strokeStyle=`rgba(255,255,255,${a})`;ctx.beginPath();ctx.arc(cx,y,half+8,0,7);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=`rgba(255,255,255,${a})`;for(const sgn of[-1,1]){ctx.beginPath();ctx.moveTo(cx+sgn*(half+20),y);ctx.lineTo(cx+sgn*(half+12),y-5);ctx.lineTo(cx+sgn*(half+12),y+5);ctx.fill()}}
+  for(const [x,w] of [[-20,cx-half+20],[cx+half,LW-cx-half+20]]){
+    ctx.fillStyle="rgba(43,32,64,.15)";rr(ctx,x,top+7,w,BAR_H,6);ctx.fill();
+    ctx.fillStyle="rgba(207,239,255,.75)";rr(ctx,x,top,w,BAR_H,6);ctx.fill();
+    ctx.save();rr(ctx,x,top,w,BAR_H,6);ctx.clip();ctx.strokeStyle="rgba(255,255,255,.9)";ctx.lineWidth=2;
+    for(let sx=x+8;sx<x+w;sx+=34){ctx.beginPath();ctx.moveTo(sx,top+3);ctx.lineTo(sx+8,top+12);ctx.lineTo(sx+4,top+BAR_H-3);ctx.stroke()}
+    ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(x,top+3,w,3);ctx.restore();
+    ctx.lineWidth=3;ctx.strokeStyle=INK;rr(ctx,x,top,w,BAR_H,6);ctx.stroke();
+  }
 }
 // Shared blob painter: used in the game and for skin previews.
 function paintBlob(c,r,s,o={}){
@@ -653,11 +774,12 @@ function drawBlob(){
 // ---------- flow ----------
 function startRun(){
   if(maybeInterstitial())return;
-  newRun(); state="play"; freezeUntil=0;
+  newRun(); state="play"; freezeUntil=0; zoneT=-9; pwKey=""; $("pw").innerHTML=""; setIntro(null);
   show("hud"); updateHud(); SFX.ui();
 }
 const RIBBON={crash:["SQUISHED!","var(--pink)"],fade:["FADED OUT!","var(--blue)"],best:["NEW BEST!","var(--yellow)"]};
 function gameOver(){
+  setIntro(null);
   state="over"; S.runs++; runsSinceInter++; blobVis=1;
   const isBest=R.score>S.best, prevBest=S.best; if(isBest)S.best=R.score;
   S.coins+=R.coins;
@@ -677,6 +799,9 @@ function gameOver(){
   $("oMsg").textContent=msg;
   $("oGates").textContent=R.passed;$("oPerf").textContent=R.perfects;$("oCoins").textContent=R.coins;
   $("bDouble").hidden=!(R.coins>=3&&!R.doubled);
+  if(R.zone<ZONE_AT.length-1){const nx=ZONE_AT[R.zone+1];
+    $("oZone").innerHTML=`<span>Next zone: <b>${THEMES[R.zone+1].name}</b> at gate ${nx}</span><span class="pb"><i style="width:${Math.round(R.passed/nx*100)}%"></i><span>${R.passed}/${nx}</span></span>`}
+  else $("oZone").innerHTML=`<span>You reached the final zone: <b>${THEMES[R.zone].name}</b>!</span>`;
   show("over"); overLock=performance.now()+700;
   if(isBest&&R.score>0&&prevBest>0){confetti();SFX.reward()}
   done.forEach((m,i)=>setTimeout(()=>{toast(`Mission done! +${m.rw}`);SFX.reward()},400+i*600));
@@ -685,7 +810,7 @@ function gameOver(){
 let overLock=0;
 function continueRun(){
   R.cont=true; R.glow=3; R.chain=0; blobR=30; blobVis=1; sinceToggle=0;
-  R.gates=R.gates.filter(g=>g.y<BY-260);
+  R.gates=R.gates.filter(g=>g.y<BY-260);R.gems=R.gems.filter(m=>m.y<BY-260);
   if(!R.gates.length)makeGate(BY-300);
   state="play"; freezeUntil=T+1.1; show("hud"); updateHud();
 }
@@ -701,6 +826,14 @@ function updateHud(bump){
   const m=1+Math.min(4,Math.floor(R.chain/3)); $("mult").textContent=m>1?`×${m}`:"";
   if(bump&&m!==lastMult&&m>1){$("mult").style.transform="rotate(6deg) scale(1.5)";setTimeout(()=>$("mult").style.transform="",160)} lastMult=m;
 }
+function setIntro(k){const el=$("intro");
+  if(!k){if(!el.hidden)el.hidden=true;return}
+  if(el.hidden||el.dataset.k!==k){el.dataset.k=k;$("introT").textContent=INTROS[k][0];$("introS").textContent=INTROS[k][1];el.hidden=false;SFX.ui()}}
+function renderPw(){if(!R)return;const c=[];
+  if(R.pw.shield)c.push(`<span class="pwchip">${ic("shield")}</span>`);
+  if(T<R.pw.slowUntil)c.push(`<span class="pwchip">${ic("slow")}${Math.ceil(R.pw.slowUntil-T)}</span>`);
+  if(T<R.pw.dblUntil)c.push(`<span class="pwchip">${ic("x2")}${Math.ceil(R.pw.dblUntil-T)}</span>`);
+  const k=c.join("");if(k!==pwKey){pwKey=k;$("pw").innerHTML=k}}
 function toast(t,icon="coin"){const d=document.createElement("div");d.className="toast";d.innerHTML=`${ic(icon)}${t}`;$("toasts").appendChild(d);setTimeout(()=>d.remove(),2700)}
 
 // ---------- panels ----------
@@ -764,6 +897,9 @@ function trackMissions(r){
     else if(m.k==="coins") m.p+=r.coins;
     else if(m.k==="squeeze") m.p+=r.squeezes;
     else if(m.k==="gold") m.p+=r.gold;
+    else if(m.k==="smash") m.p+=r.smash;
+    else if(m.k==="gems") m.p+=r.gemsGot;
+    else if(m.k==="box") m.p+=r.boxes;
     if(m.p>=m.t){m.p=m.t;m.done=true;S.coins+=m.rw;done.push(m)}}
   return done;
 }
@@ -811,36 +947,36 @@ function renderHome(){
   const open=S.missions.filter(m=>!m.done).length;$("mBadge").textContent=open;$("mBadge").hidden=open===0;
 }
 function previewBlob(cv,s){const d=Math.min(window.devicePixelRatio||1,2);cv.width=64*d;cv.height=64*d;const c=cv.getContext("2d");c.scale(d,d);c.translate(32,33);paintBlob(c,25,s,{t:1})}
-function previewWorld(cv,t){const d=Math.min(window.devicePixelRatio||1,2);cv.width=64*d;cv.height=64*d;const c=cv.getContext("2d");c.scale(d,d);
+function previewWorld(cv,t,hidden){const d=Math.min(window.devicePixelRatio||1,2);cv.width=64*d;cv.height=64*d;const c=cv.getContext("2d");c.scale(d,d);
   c.beginPath();c.roundRect?c.roundRect(2,2,60,60,12):c.rect(2,2,60,60);c.save();c.clip();
   const g=c.createLinearGradient(0,0,0,64);g.addColorStop(0,t.top);g.addColorStop(1,t.bot);c.fillStyle=g;c.fillRect(0,0,64,64);
   c.fillStyle=t.sun;c.beginPath();c.arc(46,16,7,0,7);c.fill();c.fillStyle=t.far;c.beginPath();c.ellipse(16,62,34,20,0,0,7);c.fill();
-  c.fillStyle=t.near;c.beginPath();c.ellipse(52,66,34,18,0,0,7);c.fill();c.fillStyle=t.gate;c.fillRect(0,26,22,7);c.fillRect(42,26,22,7);c.restore();
+  c.fillStyle=t.near;c.beginPath();c.ellipse(52,66,34,18,0,0,7);c.fill();c.fillStyle=t.gate;c.fillRect(0,26,22,7);c.fillRect(42,26,22,7);
+  if(hidden){c.fillStyle="rgba(43,32,64,.75)";c.fillRect(0,0,64,64);c.font=`400 30px ${FONT}`;c.textAlign="center";c.textBaseline="middle";c.fillStyle="#fff";c.fillText("?",32,34)}c.restore();
   c.lineWidth=3;c.strokeStyle=INK;c.beginPath();c.roundRect?c.roundRect(2,2,60,60,12):c.rect(2,2,60,60);c.stroke()}
 function skinsPanel(){
-  const m=panel("SKINS","var(--pink)",`<div class="scroll">
+  const m=panel("COLLECTION","var(--pink)",`<div class="scroll">
    <div class="sect"><span>Blobs</span><span class="pill">${ic("coin")}${S.coins}</span></div>
    <div class="grid">${SKINS.map(s=>{const own=S.skins.includes(s.id),sel=S.skin===s.id;
      return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-skin="${s.id}"><canvas></canvas>${s.name}
        ${own?`<span class="state">${sel?"Equipped":"Equip"}</span>`:s.cost<0?`<span class="state">${s.note}</span>`:`<span class="price">${ic("coin")}${s.cost}</span>`}</button>`}).join("")}</div>
-   <div class="sect"><span>Worlds</span></div>
-   <div class="grid">${THEMES.map(t=>{const own=S.level>=t.lvl,sel=S.theme===t.id;
-     return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-theme="${t.id}"><canvas></canvas>${t.name}
-       <span class="state">${own?(sel?"Selected":"Select"):`${ic("lock")} Level ${t.lvl}`}</span></button>`}).join("")}</div></div>`);
+   <div class="sect"><span>Zones discovered</span><span class="pill">${(S.zone||0)+1}/${THEMES.length}</span></div>
+   <div class="grid">${THEMES.map((t,i)=>{const own=(S.zone||0)>=i;
+     return `<div class="tile ${own?"":"locked"}" data-theme="${t.id}"><canvas></canvas>${own?t.name:"???"}
+       <span class="state">${own?(i?`Gate ${ZONE_AT[i]}`:"Start"):`${ic("lock")} Gate ${ZONE_AT[i]}`}</span></div>`}).join("")}</div></div>`);
   m.querySelectorAll("[data-skin] canvas").forEach(c=>previewBlob(c,SKINS.find(s=>s.id===c.parentElement.dataset.skin)));
-  m.querySelectorAll("[data-theme] canvas").forEach(c=>previewWorld(c,THEMES.find(t=>t.id===c.parentElement.dataset.theme)));
+  m.querySelectorAll("[data-theme] canvas").forEach((c,i)=>previewWorld(c,THEMES[i],(S.zone||0)<i));
   m.querySelectorAll("[data-skin]").forEach(b=>b.onclick=()=>{const s=SKINS.find(x=>x.id===b.dataset.skin);
     if(S.skins.includes(s.id)){S.skin=s.id;SFX.ui()}else if(s.cost>0&&S.coins>=s.cost){S.coins-=s.cost;S.skins.push(s.id);S.skin=s.id;SFX.reward();toast(`${s.name} unlocked!`,"blob")}
     else{SFX.loose();toast(s.cost<0?"Reach a 7-day streak":`Need ${s.cost-S.coins} more coins`);return}
     save();renderHome();m.remove();skinsPanel()});
-  m.querySelectorAll("[data-theme]").forEach(b=>b.onclick=()=>{const t=THEMES.find(x=>x.id===b.dataset.theme);
-    if(S.level<t.lvl){SFX.loose();toast(`Reach level ${t.lvl}`,"lock");return} S.theme=t.id;SFX.ui();save();m.remove();skinsPanel()});
+
 }
 function settingsPanel(){
   const m=panel("SETTINGS","var(--blue)",`
    <div class="setrow">${ic("sound")}<span>Sound</span><button class="sw" id="swS" aria-pressed="${S.sound}" aria-label="Sound"></button></div>
    <div class="setrow">${ic("vib")}<span>Vibration</span><button class="sw" id="swH" aria-pressed="${S.haptics}" aria-label="Vibration"></button></div>
-   <p class="note">Ads in this prototype are simulated. Video ads only play when you choose them. Runs played: ${S.runs}.</p>
+   <p class="note">Ads in this prototype are simulated. Video ads only play when you choose them. Runs played: ${S.runs}. Version ${BUILD}.</p>
    <button class="btn pink wide" id="bReset" style="font-size:18px">RESET PROGRESS</button>`);
   m.querySelector("#swS").onclick=e=>{S.sound=!S.sound;e.currentTarget.setAttribute("aria-pressed",S.sound);if(!S.sound&&humGain)humGain.gain.value=0;else SFX.ui();save()};
   m.querySelector("#swH").onclick=e=>{S.haptics=!S.haptics;e.currentTarget.setAttribute("aria-pressed",S.haptics);buzz(15);save()};
@@ -875,11 +1011,24 @@ $("bRetry").onclick=()=>{if(state==="over")startRun()};
 $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
+// ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
+const BUILD="4";
+function checkForUpdate(){
+  if(!/github\.io$/.test(location.hostname))return;
+  fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
+    const m=t.match(/const BUILD="(\w+)"/);if(!m||m[1]===BUILD)return;
+    let tried=null;try{tried=sessionStorage.getItem("snug.reload")}catch(e){}
+    if(tried===m[1])return; try{sessionStorage.setItem("snug.reload",m[1])}catch(e){}
+    if(state==="home")location.replace(location.pathname+"?v="+m[1]);
+  }).catch(()=>{});
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkForUpdate()});
 // ---------- boot ----------
 function boot(){
   resize(); ensureMissions(); renderHome(); show("home");
   const info=checkStreak(); if(info) streakModal(info);
   requestAnimationFrame(t=>{last=t;frame(t)});
+  checkForUpdate();
 }
 window.claude?.hot?.snapshot?.(()=>({}));
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});

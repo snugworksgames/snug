@@ -101,6 +101,20 @@ Bots are a tuning aid, not a replacement for playtests. Re-tune `SnugConfig` aga
 
 ---
 
+## 4b. Variety and discovery
+
+Each mechanic appears mid-run the first time with a "NEW!" banner while the game slows to 55% until that object passes. After that it shows up normally.
+
+| Mechanic | First appears | Rule | Why it's there |
+|---|---|---|---|
+| **Gems** | after gate 5, about half the gaps between gates | Off to one side of the path. Grow big enough to touch one as it passes: +1 coin, +2 points. A dashed arc shows the size needed. | A risk/reward choice between gates: grow for the gem, but the next gate may be narrow. |
+| **Glass gates** | gate 9+, about 16% of gates, never two in a row | The rule flips: be **bigger** than the gap to SMASH it (+4 points, chain, +1 glow). Too small is loose. You can't crash on glass. | Breaks autopilot. You have to read each gate. |
+| **Mystery boxes** | gate 7, then every 9–13 gates | A "?" box in the gap. A Perfect or Squeeze opens it for a random power-up: **Shield** (absorbs one crash), **Slow-mo** (60% speed for 4 s) or **Double points** (6 s). | Surprise reward for precision. |
+| **Twin gates** | gate 16+, about 12% | The next gate arrives after 125 px instead of the normal spacing. The size change is limited to what's reachable in that time. | Rhythm change and burst intensity. |
+| **Zones** | gates 25 / 50 / 80 | Sky changes Meadow → Sunset → Candy → Starry with a banner and confetti. Zones reached are saved in the Collection; results show progress to the next one. | A long-term "what's next?" goal and a visible journey. |
+
+Missions added: smash glass gates, grab gems, open mystery boxes. The world picker was replaced by the zone collection, so new skies are earned by climbing rather than by level.
+
 ## 5. "One more try" design
 
 - **Restart in under 1 second.** Hold anywhere on the results screen. Results get a 0.7 s read window first.
