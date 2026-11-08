@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1d30">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Snug</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: one full-bleed canvas (the pond) with thin DOM sheets floating over it for menus. Single dark world by choice. */
+:root{
+  --ink:#0f1d30; --pond:#1b3550; --peach:#ffb38a; --mint:#7fd1b9; --gold:#ffd66b; --cream:#fff4e8;
+  --muted:#9fb3c8; --panel:rgba(14,27,45,.86); --line:rgba(159,179,200,.22); --danger:#ff8a8a;
+  --display:"Bagel Fat One","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",ui-rounded,"Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html{box-sizing:border-box;height:100%}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--ink);color:var(--cream);font-family:var(--body);font-weight:600;
+  overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#stage{position:relative;height:100%;max-width:520px;margin:0 auto;overflow:hidden;touch-action:none;background:var(--ink)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.layer{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 18px;pointer-events:none}
+.layer > *{pointer-events:auto}
+.layer .passthru{pointer-events:none}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:6px 11px;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;backdrop-filter:blur(6px)}
+.coin{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3bf,var(--gold) 55%,#c98f1f);box-shadow:0 0 0 1.5px #b07a12 inset}
+.lvl{flex:1;min-width:120px}
+.xp{flex:1;height:7px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+.xp i{display:block;height:100%;background:var(--mint);border-radius:9px;transition:width .5s}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center}
+.iconbtn svg{width:18px;height:18px}
+
+/* home */
+.title{margin-top:auto;text-align:center}
+.title h1{font-family:var(--display);font-weight:400;font-size:clamp(64px,22vw,104px);line-height:.9;margin:0;color:var(--peach);
+  letter-spacing:.01em;text-shadow:0 6px 0 #c4744f,0 14px 30px rgba(0,0,0,.35)}
+.title p{margin:10px 0 0;color:var(--muted);font-size:15px}
+.best{margin-top:6px;font-weight:900;color:var(--cream);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.hint{margin:22px auto 0;text-align:center;font-weight:900;font-size:17px;letter-spacing:.04em;animation:pulse 1.4s ease-in-out infinite}
+.hint small{display:block;font-weight:700;font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+@keyframes pulse{50%{opacity:.45;transform:scale(.97)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;backdrop-filter:blur(8px)}
+.missions{margin-top:auto;display:grid;gap:8px}
+.missions h2{margin:0 0 2px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.mis{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;font-size:14px}
+.mis .pb{grid-column:1/-1;height:5px;border-radius:9px;background:rgba(255,255,255,.1);overflow:hidden}
+.mis .pb i{display:block;height:100%;background:var(--peach)}
+.mis.done{opacity:.6}.mis.done .pb i{background:var(--mint)}
+.mis .rw{display:inline-flex;align-items:center;gap:4px;font-weight:800;font-variant-numeric:tabular-nums;font-size:13px}
+.row{display:flex;gap:8px}
+.btn{flex:1;border-radius:14px;padding:12px 10px;font-weight:900;font-size:15px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--peach);color:#3a1d10;border-color:transparent;box-shadow:0 4px 0 #c4744f}
+.btn.ad{background:#2a4d6b;border-color:rgba(127,209,185,.4)}
+.btn .tag{font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:rgba(0,0,0,.25);border-radius:6px;padding:2px 5px}
+.btn:active{transform:translateY(2px)}
+
+/* hud */
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:start}
+.score{font-family:var(--display);font-size:64px;line-height:1;text-align:center;font-variant-numeric:tabular-nums;text-shadow:0 4px 0 rgba(0,0,0,.25)}
+.pips{display:flex;gap:6px;padding-top:12px}
+.pip{width:14px;height:14px;border-radius:50%;background:var(--peach);box-shadow:0 0 10px var(--peach);transition:all .25s}
+.pip.off{background:transparent;box-shadow:none;border:2px solid rgba(255,179,138,.35)}
+.mult{justify-self:end;margin-top:10px;font-weight:900;font-size:18px;color:var(--gold);transition:transform .15s}
+
+/* game over */
+.over{margin:auto 0;display:grid;gap:12px;text-align:center}
+.over .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.over .big{font-family:var(--display);font-size:92px;line-height:.95;color:var(--cream)}
+.over .msg{font-weight:900;font-size:18px;color:var(--peach);min-height:1.3em;text-wrap:balance}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:rgba(255,255,255,.05);border-radius:12px;padding:8px 4px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.newbest{display:inline-block;margin:0 auto;background:var(--gold);color:#3b2a05;border-radius:999px;padding:4px 12px;font-weight:900;font-size:13px;letter-spacing:.1em;text-transform:uppercase;animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+.retry{font-weight:900;font-size:16px;color:var(--cream);animation:pulse 1.4s ease-in-out infinite;margin-top:4px}
+
+/* sheets & modals */
+.sheet{position:absolute;inset:auto 0 0 0;max-height:86%;overflow:auto;background:#12233a;border-top:1px solid var(--line);border-radius:22px 22px 0 0;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:14px;pointer-events:auto;animation:up .25s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+.sheet h3{margin:0;font-family:var(--display);font-weight:400;font-size:28px;color:var(--peach);display:flex;justify-content:space-between;align-items:center}
+.sheet h4{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.skin{border-radius:16px;background:rgba(255,255,255,.05);border:2px solid transparent;padding:10px 6px;display:grid;justify-items:center;gap:6px;font-size:13px;font-weight:800}
+.skin.sel{border-color:var(--gold)}
+.skin .ball{width:44px;height:44px;border-radius:50%}
+.skin.locked .ball{filter:grayscale(.7) brightness(.6)}
+.skin small{display:inline-flex;gap:4px;align-items:center;color:var(--muted);font-weight:800}
+.modal{position:absolute;inset:0;display:grid;place-items:center;background:rgba(6,12,22,.66);pointer-events:auto;padding:16px}
+.modal .card{max-width:340px;width:100%;text-align:center;display:grid;gap:12px;padding:22px 18px;animation:pop .35s cubic-bezier(.3,1.5,.5,1)}
+.modal h3{margin:0;font-family:var(--display);font-weight:400;font-size:34px;color:var(--peach)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.day{border-radius:10px;padding:6px 0;background:rgba(255,255,255,.06);font-size:11px;font-weight:900;display:grid;gap:2px;justify-items:center}
+.day.got{background:rgba(127,209,185,.22);color:var(--mint)}
+.day.now{background:var(--peach);color:#3a1d10}
+.adfake{background:#000;inset:0;position:absolute;display:grid;place-items:center;pointer-events:auto;text-align:center;padding:24px;gap:10px;align-content:center}
+.adfake .k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#888}
+.adfake .t{font-family:var(--display);font-size:30px;color:#ddd}
+.toasts{position:absolute;left:0;right:0;top:64px;display:grid;justify-items:center;gap:6px;pointer-events:none;padding-inline:16px}
+.toast{background:var(--mint);color:#0d2a22;font-weight:900;border-radius:999px;padding:8px 14px;font-size:14px;animation:toast 2.6s ease forwards;display:flex;gap:6px;align-items:center}
+@keyframes toast{0%{transform:translateY(-12px);opacity:0}10%,80%{transform:none;opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+.toggle{display:flex;justify-content:space-between;align-items:center;font-weight:800}
+.sw{width:50px;height:30px;border-radius:99px;background:rgba(255,255,255,.15);position:relative}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--cream);transition:left .2s}
+.sw[aria-pressed="true"]{background:var(--mint)}.sw[aria-pressed="true"]::after{left:23px}
+.note{font-size:13px;color:var(--muted);line-height:1.5;margin:0}
+@media (prefers-reduced-motion:reduce){.hint,.retry{animation:none}*{animation-duration:.01s!important}}
+</style>
+
+<div id="stage">
+  <canvas id="cv" aria-label="Snug game area. Hold to grow the blob, let go to shrink it."></canvas>
+
+  <!-- HOME -->
+  <div class="layer" id="home">
+    <div class="bar">
+      <span class="chip"><span class="coin"></span><b id="hCoins">0</b></span>
+      <span class="chip lvl"><span>Lv <b id="hLvl">1</b></span><span class="xp"><i id="hXp" style="width:0"></i></span></span>
+      <span class="chip" title="Daily streak"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="#ff9a5c" d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 3 2 5 4.5 5 8a7 7 0 0 1-14 0c0-6 7-8 7-14z"/></svg><b id="hStreak">1</b></span>
+      <button class="iconbtn" id="bSkins" aria-label="Skins and themes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="13" r="7"/><circle cx="9.5" cy="12" r="1" fill="currentColor"/><circle cx="14.5" cy="12" r="1" fill="currentColor"/></svg></button>
+      <button class="iconbtn" id="bSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
+    <div class="title passthru">
+      <h1>Snug</h1>
+      <p>Hold to grow. Let go to shrink. Fit the gap.</p>
+      <div class="best">Best <span id="hBest">0</span></div>
+      <div class="hint">Hold anywhere<small>to start</small></div>
+    </div>
+    <div class="missions card" id="mCard">
+      <h2><span>Today's missions</span><span id="mReset"></span></h2>
+      <div id="mList" style="display:grid;gap:9px"></div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div class="layer passthru" id="hud" hidden>
+    <div class="hud passthru">
+      <div class="pips" id="pips"><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+      <div class="score" id="score">0</div>
+      <div class="mult" id="mult"></div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="layer" id="over" hidden>
+    <div class="over passthru">
+      <div class="lbl">Score</div>
+      <div class="big" id="oScore">0</div>
+      <div id="oBestWrap"></div>
+      <div class="msg" id="oMsg"></div>
+      <div class="stats">
+        <div class="stat"><b id="oGates">0</b><span>Gates</span></div>
+        <div class="stat"><b id="oPerf">0</b><span>Perfects</span></div>
+        <div class="stat"><b id="oCoins">0</b><span>Coins</span></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:10px">
+      <div class="row">
+        <button class="btn ad" id="bDouble"><span class="tag">Ad</span>2× coins</button>
+      </div>
+      <button class="btn primary" id="bRetry">Play again</button>
+      <div class="retry passthru" style="text-align:center;font-size:13px;color:var(--muted)">or hold anywhere</div>
+      <button class="btn" id="bHome" style="flex:none">Home</button>
+    </div>
+  </div>
+
+  <div id="pop"></div>
+  <div class="toasts" id="toasts"></div>
+</div>
+
+<script>
+(() => {
+"use strict";
+// ---------- tiny utils ----------
+const $ = id => document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, rand=(a,b)=>a+Math.random()*(b-a);
+const todayKey=(d=new Date())=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const dayDiff=(a,b)=>Math.round((new Date(b+"T12:00")-new Date(a+"T12:00"))/864e5);
+function seeded(seed){let s=0;for(const c of seed)s=(s*31+c.charCodeAt(0))>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+
+// ---------- content tables ----------
+const SKINS=[
+ {id:"peach",name:"Peach",c:"#ffb38a",d:"#c4744f",cost:0},
+ {id:"mint",name:"Mint",c:"#8ff0c8",d:"#3fa985",cost:150},
+ {id:"lilac",name:"Lilac",c:"#c9a7ff",d:"#7f5bc4",cost:300},
+ {id:"lemon",name:"Lemon",c:"#ffe36e",d:"#c2a12a",cost:450},
+ {id:"sky",name:"Sky",c:"#8fd3ff",d:"#3f8ec4",cost:600},
+ {id:"ruby",name:"Ruby",c:"#ff7b9c",d:"#c4446a",cost:800},
+ {id:"aurora",name:"Aurora",c:"#9ff5e6",d:"#8a6cff",cost:-1,note:"7-day streak"}
+];
+const THEMES=[
+ {id:"pond",name:"Night pond",top:"#0f1d30",bot:"#1d3b55",gate:"#7fd1b9",gateD:"#3f8f78",dot:"#7fd1b9",lvl:1},
+ {id:"dusk",name:"Dusk",top:"#241a33",bot:"#5a3550",gate:"#ffc9a3",gateD:"#b97a5a",dot:"#ffd0e0",lvl:3},
+ {id:"moss",name:"Moss",top:"#122219",bot:"#2c4a33",gate:"#e9d78f",gateD:"#a5914a",dot:"#d8f0a0",lvl:5},
+ {id:"ember",name:"Ember",top:"#1f1012",bot:"#4b2419",gate:"#ffb070",gateD:"#b7652c",dot:"#ffcf8a",lvl:8}
+];
+const MISSION_POOL=[
+ {k:"perfRun",t:6,rw:25,txt:n=>`Get ${n} Perfects in one run`},
+ {k:"chain",t:4,rw:30,txt:n=>`Chain ${n} Perfects in a row`},
+ {k:"gatesRun",t:25,rw:30,txt:n=>`Pass ${n} gates in one run`},
+ {k:"scoreRun",t:40,rw:35,txt:n=>`Score ${n} in one run`},
+ {k:"runs",t:5,rw:20,txt:n=>`Play ${n} runs`},
+ {k:"coins",t:15,rw:25,txt:n=>`Collect ${n} coins`},
+ {k:"squeeze",t:2,rw:30,txt:n=>`Pull off ${n} Squeezes`},
+ {k:"gold",t:1,rw:30,txt:()=>`Nail a gold gate`}
+];
+const STREAK_REWARDS=[10,15,20,25,30,40,50];
+const xpNeed=l=>80+l*40;
+
+// ---------- save ----------
+const DEF={best:0,coins:0,xp:0,level:1,skins:["peach"],skin:"peach",theme:"pond",streak:0,lastDay:null,
+  mDay:null,missions:[],runs:0,sessions:0,sound:true,haptics:true,seenStreakDay:null};
+let S=Object.assign({},DEF);
+try{const raw=localStorage.getItem("snug.v1");if(raw)S=Object.assign({},DEF,JSON.parse(raw))}catch(e){}
+const save=()=>{try{localStorage.setItem("snug.v1",JSON.stringify(S))}catch(e){}};
+S.sessions++;
+
+// ---------- audio & haptics ----------
+let AC=null, hum=null, humGain=null;
+function audio(){ if(!S.sound) return null; if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();
+  hum=AC.createOscillator();humGain=AC.createGain();hum.type="sine";humGain.gain.value=0;hum.connect(humGain).connect(AC.destination);hum.start()}catch(e){AC=null}}
+  if(AC&&AC.state==="suspended")AC.resume(); return AC;}
+function tone(f,dur=.12,type="sine",vol=.18,slide=0,delay=0){const a=audio();if(!a)return;const t=a.currentTime+delay;
+  const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f*slide),t+dur);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.02)}
+const PENTA=[0,2,4,7,9,12,14,16,19,21,24];
+const note=i=>523.25*Math.pow(2,PENTA[Math.min(i,PENTA.length-1)]/12);
+const SFX={
+ perfect:s=>{tone(note(s),.22,"triangle",.2);tone(note(s)*2,.16,"sine",.07,0,.03)},
+ good:()=>tone(392,.12,"triangle",.13),
+ loose:()=>tone(160,.22,"sine",.2,.6),
+ squeeze:()=>{tone(700,.08,"square",.06,1.6);tone(note(6),.25,"triangle",.18,0,.06)},
+ crash:()=>{tone(220,.35,"sawtooth",.12,.3);tone(90,.4,"sine",.25,.5)},
+ coin:()=>{tone(1318,.07,"square",.05);tone(1760,.12,"square",.05,0,.06)},
+ ui:()=>tone(660,.06,"triangle",.08),
+ reward:()=>[0,3,5,7].forEach((n,i)=>tone(note(n),.18,"triangle",.14,0,i*.07))
+};
+function buzz(ms){if(S.haptics&&navigator.vibrate){try{navigator.vibrate(ms)}catch(e){}}}
+
+// ---------- canvas ----------
+const cv=$("cv"), ctx=cv.getContext("2d");
+const LW=360; let LH=640, SC=1, DPR=1, BY=470;
+function resize(){const r=cv.getBoundingClientRect();DPR=Math.min(window.devicePixelRatio||1,2.5);SC=r.width/LW;LH=r.height/SC;
+  cv.width=Math.round(r.width*DPR);cv.height=Math.round(r.height*DPR);BY=LH*0.72;}
+window.addEventListener("resize",resize);
+
+// ---------- game constants ----------
+const GROW=140, SHRINK=160, MINF=.3, RAMP=.3, RMIN=12, RMAX=98, BAR_H=22; // speed ramps up after each press/release: taps nudge, holds sweep
+let lastHold=false, sinceToggle=0;
+const rateNow=h=>(h?GROW:SHRINK)*(MINF+(1-MINF)*Math.min(1,sinceToggle/RAMP));
+const theme=()=>THEMES.find(t=>t.id===S.theme)||THEMES[0];
+const skin=()=>SKINS.find(s=>s.id===S.skin)||SKINS[0];
+
+// ---------- state ----------
+let state="home", T=0, holding=false, paused=false;
+let R; // run
+let blobR=26, blobVis=1, squish=0, wob=0, shake=0, freezeUntil=0, flash=0;
+let parts=[], pops=[], motes=[];
+for(let i=0;i<34;i++)motes.push({x:Math.random()*LW,y:Math.random()*900,z:rand(.2,1),p:Math.random()*6});
+const sessionStart=performance.now(); let runsSinceInter=0, lastRewardedAt=-1e9;
+
+function newRun(){
+  R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,cont:false,doubled:false,first:S.runs===0,t:0};
+  blobR=26; blobVis=1; parts=[]; pops=[]; sinceToggle=0;
+  spawnUntilTop(BY-310);
+}
+const speed=n=> (R&&R.first&&n<6? 150 : 0) || Math.min(150+4.5*n,360);
+const spacing=n=> Math.max(190,300-4*n);
+// First five gates teach by play. Gate 1 is wide: players start by holding, so holding all the way = a guaranteed SQUEEZE win.
+const SCRIPT=[190,88,136,70,120];
+
+function makeGate(y){
+  const n=R.n++, prev=R.gates.length?R.gates[R.gates.length-1].base:60;
+  let g;
+  if(n<SCRIPT.length) g=SCRIPT[n];
+  else{
+    const k=clamp(n/40,0,1), minG=lerp(70,44,k), maxG=lerp(132,176,k);
+    const dt=spacing(n)/speed(n);
+    const reach=2*Math.min(GROW,SHRINK)*Math.max(0,dt-RAMP*(1-MINF)/2)*0.72; // fairness: change must be physically reachable with slack
+    const maxDelta=Math.min(28+n*4,135,reach);
+    const minDelta=Math.min(18,maxDelta*0.5);              // avoid boring repeats
+    let dir=Math.random()<.5?-1:1;
+    if(prev-maxDelta<minG) dir=1; if(prev+maxDelta>maxG) dir=-1;
+    g=clamp(prev+dir*rand(minDelta,maxDelta),minG,maxG);
+  }
+  const gold = n>0 && n%10===9;
+  const amp = n>=30 ? Math.min(6+(n-30)*.6,14) : 0;        // "breathing" gates late game
+  R.gates.push({y,base:g,cur:g,amp,ph:Math.random()*6,gold,done:false,n,res:null,resT:0});
+}
+function spawnUntilTop(firstY){
+  if(!R.gates.length) makeGate(firstY);
+  let top=R.gates[R.gates.length-1];
+  while(top.y>-80){makeGate(top.y-spacing(R.n));top=R.gates[R.gates.length-1];}
+}
+
+// ---------- judging ----------
+function judge(g){
+  const gap=g.cur, d=2*blobR, fit=d/gap, early=R.passed<5;
+  const tol=early?10:6;
+  if(d>gap+tol){crash(g);return}
+  R.passed++;
+  const pTh=early?0.80:0.84;
+  let label,col,pts=0;
+  if(d>gap-1.5){ // squeeze: tighter than perfect, tiny overlap allowed
+    R.chain++;R.perfects++;R.squeezes++;pts=5;label="SQUEEZE!";col="#fff4e8";SFX.squeeze();buzz(18);burst(g,40,true);flash=.5;
+    if(R.glow<3)R.glow++;
+  } else if(fit>=pTh){
+    R.chain++;R.perfects++;pts=3;label=R.chain>=3?`PERFECT ×${R.chain}`:"PERFECT!";col=g.gold?"#ffd66b":"#fff4e8";SFX.perfect(R.chain-1);buzz(10);burst(g,26,false);
+    if(R.glow<3)R.glow++;
+  } else if(fit>=0.60){
+    R.chain=0;pts=1;label="Good";col="#9fb3c8";SFX.good();burst(g,8,false);
+  } else {
+    R.chain=0;label=R.first&&R.passed<8?"Too loose! Hold to grow":"Too loose";col="#ff8a8a";SFX.loose();buzz(25);R.glow--;
+  }
+  R.bestChain=Math.max(R.bestChain,R.chain);
+  const mult=1+Math.min(4,Math.floor(R.chain/3));
+  R.score+=pts*mult;
+  if(pts>=3){const c=g.gold?5:1;R.coins+=c;if(g.gold){R.gold++;label="GOLD! +5";SFX.coin()} else if(R.chain%3===0)SFX.coin();}
+  g.res=label; g.resT=T;
+  popup(label,LW/2,BY-blobR-26,col,label.length>10?20:26);
+  if(R.passed===10||R.passed===25||R.passed===50){popup(`${R.passed} gates!`,LW/2,BY-140,"#ffd66b",30);SFX.reward();ring(60)}
+  updateHud(true);
+  if(R.glow<=0){fadeOut()}
+}
+function crash(g){
+  state="dying"; holding=false; shake=14; squish=1; SFX.crash(); buzz([30,40,60]);
+  for(let i=0;i<34;i++)parts.push({x:LW/2+rand(-blobR,blobR),y:BY+rand(-8,8),vx:rand(-260,260),vy:rand(-320,40),life:rand(.5,1),max:1,c:skin().c,s:rand(3,8),g:600});
+  R.end="crash"; setTimeout(endRun,900);
+}
+function fadeOut(){state="dying";holding=false;R.end="fade";SFX.loose();setTimeout(endRun,900)}
+// After a fail: offer one rewarded revive (player's choice, 4 s), then score the run exactly once.
+function endRun(){
+  if(!R.cont&&R.score>=6){state="revive";reviveModal();return}
+  gameOver();
+}
+function reviveModal(){
+  const m=document.createElement("div");m.className="modal";
+  m.innerHTML=`<div class="card"><h3>Keep going?</h3><div style="font-family:var(--display);font-size:72px;line-height:1" id="rvN">4</div>
+    <button class="btn ad" id="rvYes"><span class="tag">Ad</span>Watch to continue</button>
+    <button class="btn" id="rvNo" style="background:transparent;border:0;color:var(--muted)">No thanks</button></div>`;
+  $("stage").appendChild(m);
+  let left=4;const iv=setInterval(()=>{left--;const n=m.querySelector("#rvN");if(n)n.textContent=Math.max(0,left);if(left<=0)no()},1000);
+  const close=()=>{clearInterval(iv);m.remove()};
+  const no=()=>{if(state!=="revive")return;close();gameOver()};
+  m.querySelector("#rvNo").onclick=e=>{e.stopPropagation();no()};
+  m.querySelector("#rvYes").onclick=e=>{e.stopPropagation();close();state="ad";showAd("rewarded",()=>continueRun())};
+}
+
+// ---------- particles ----------
+function burst(g,n,big){const c=g.gold?"#ffd66b":skin().c;
+  for(let i=0;i<n;i++){const a=rand(0,Math.PI*2),sp=rand(80,big?360:240);
+    parts.push({x:LW/2+Math.cos(a)*blobR,y:BY+Math.sin(a)*blobR,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-40,life:rand(.35,.8),max:.8,c:Math.random()<.4?"#fff4e8":c,s:rand(2,big?6:4.5),g:220})}
+  ring(blobR)}
+function ring(r0){parts.push({ring:true,x:LW/2,y:BY,r:r0,life:.45,max:.45})}
+function popup(text,x,y,c,size){pops.push({text,x,y,c,size,life:1})}
+
+// ---------- loop ----------
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.033,(now-last)/1000); last=now; T+=dt;
+  if(!paused) update(dt);
+  draw(); requestAnimationFrame(frame);
+}
+function update(dt){
+  wob+=dt*(holding?14:5);
+  if(state==="play"){
+    R.t+=dt;
+    if(holding!==lastHold){lastHold=holding;sinceToggle=0} sinceToggle+=dt;
+    let rate=rateNow(holding);
+    // beginner assist: the blob gets 'sticky' near the perfect size for the first gates of the first runs
+    if(S.runs<3&&R.passed<5){const ng=R.gates.find(g=>!g.done);if(ng&&Math.abs(blobR-ng.cur*.93/2)<7)rate*=.3}
+    if(holding) blobR=Math.min(RMAX,blobR+rate*dt); else blobR=Math.max(RMIN,blobR-rate*dt);
+    humSet();
+    if(T>=freezeUntil){
+      const v=speed(R.passed);
+      for(const g of R.gates){g.y+=v*dt; g.cur=g.base+g.amp*Math.sin(T*3+g.ph);
+        if(!g.done&&g.y>=BY){g.done=true;judge(g);if(state!=="play")break}}
+      R.gates=R.gates.filter(g=>g.y<LH+60);
+      if(state==="play")spawnUntilTop();
+    }
+  } else if(state==="home"||state==="over"){
+    blobR=lerp(blobR,26+Math.sin(T*2)*2,.1); humSet(true);
+  } else if(state==="dying"){humSet(true); if(R.end==="fade") blobVis=Math.max(0,blobVis-dt*1.4);}
+  for(const p of parts){p.life-=dt;if(!p.ring){p.vy+=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}else p.r+=260*dt}
+  parts=parts.filter(p=>p.life>0);
+  for(const p of pops){p.life-=dt*0.9;p.y-=40*dt}
+  pops=pops.filter(p=>p.life>0);
+  const sp=state==="play"?speed(R.passed):40;
+  for(const m of motes){m.y+=sp*.25*m.z*dt;if(m.y>LH+10){m.y=-10;m.x=Math.random()*LW}}
+  shake=Math.max(0,shake-dt*40); squish=Math.max(0,squish-dt*2); flash=Math.max(0,flash-dt*2);
+}
+function humSet(off){if(!AC||!humGain)return;const t=AC.currentTime;
+  if(off||state!=="play"){humGain.gain.setTargetAtTime(0,t,.05);return}
+  hum.frequency.setTargetAtTime(140+blobR*3.2,t,.03);humGain.gain.setTargetAtTime(holding?.035:.012,t,.06)}
+
+// ---------- draw ----------
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,r):ctx.rect(x,y,w,h)}
+function draw(){
+  const th=theme();
+  ctx.setTransform(DPR*SC,0,0,DPR*SC,0,0);
+  if(shake>0)ctx.translate(rand(-shake,shake)*.4,rand(-shake,shake)*.4);
+  const bg=ctx.createLinearGradient(0,0,0,LH);bg.addColorStop(0,th.top);bg.addColorStop(1,th.bot);
+  ctx.fillStyle=bg;ctx.fillRect(-20,-20,LW+40,LH+40);
+  // motes (fireflies)
+  for(const m of motes){ctx.globalAlpha=.10+.25*m.z*(.6+.4*Math.sin(T*2+m.p));ctx.fillStyle=th.dot;ctx.beginPath();ctx.arc(m.x,m.y,1+m.z*1.8,0,7);ctx.fill()}
+  ctx.globalAlpha=1;
+  // lane line where gates are judged
+  ctx.strokeStyle="rgba(255,255,255,.05)";ctx.lineWidth=1;ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(0,BY);ctx.lineTo(LW,BY);ctx.stroke();ctx.setLineDash([]);
+  // gates
+  if(R&&state!=="home") for(const g of R.gates) drawGate(g,th);
+  // blob
+  drawBlob();
+  // particles
+  for(const p of parts){const a=clamp(p.life/p.max,0,1);
+    if(p.ring){ctx.strokeStyle=`rgba(255,244,232,${a*.7})`;ctx.lineWidth=3*a+1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.stroke();continue}
+    ctx.globalAlpha=a;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.s*a+.5,0,7);ctx.fill()}
+  ctx.globalAlpha=1;
+  for(const p of pops){ctx.globalAlpha=clamp(p.life*1.6,0,1);ctx.font=`400 ${p.size}px ${FONT}`;
+    ctx.textAlign="center";ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillText(p.text,p.x,p.y+3);ctx.fillStyle=p.c;ctx.fillText(p.text,p.x,p.y)}
+  ctx.globalAlpha=1;
+  // contextual hints for the first runs (teach through play, no tutorial screen)
+  if(state==="play"&&S.runs<3&&T>=freezeUntil){const ng=R.gates.find(g=>!g.done);
+    if(ng&&ng.y>BY-250){const d=2*blobR;let h=null;if(d>ng.cur+2)h="Let go to shrink";else if(d<ng.cur*.7)h="Hold to grow";
+      if(h){ctx.font="900 17px Nunito, sans-serif";ctx.textAlign="center";ctx.fillStyle="rgba(255,244,232,"+(.75+.25*Math.sin(T*8))+")";ctx.fillText(h,LW/2,Math.min(LH-20,BY+blobR+34))}}}
+  if(flash>0){ctx.fillStyle=`rgba(255,244,232,${flash*.18})`;ctx.fillRect(0,0,LW,LH)}
+  if(T<freezeUntil&&state==="play"){ctx.font="400 34px "+FONT;ctx.textAlign="center";ctx.fillStyle="#fff4e8";ctx.fillText("Ready",LW/2,BY-150)}
+  if(paused){ctx.fillStyle="rgba(6,12,22,.6)";ctx.fillRect(0,0,LW,LH);ctx.font="400 34px "+FONT;ctx.textAlign="center";ctx.fillStyle="#fff4e8";ctx.fillText("Paused",LW/2,LH/2);ctx.font="800 15px Nunito, sans-serif";ctx.fillText("Hold to resume",LW/2,LH/2+30)}
+}
+const FONT='"Bagel Fat One", sans-serif';
+function drawGate(g,th){
+  const half=g.cur/2, cx=LW/2, y=g.y, col=g.gold?"#ffd66b":th.gate, dk=g.gold?"#b88a1d":th.gateD;
+  // ghost ring: shows the perfect size; fades as the player gets better
+  const ghostA = R.passed<6 ? .55 : R.passed<20 ? .28 : .16;
+  if(!g.done&&y>-40){ctx.strokeStyle=g.gold?`rgba(255,214,107,${ghostA+.1})`:`rgba(255,244,232,${ghostA})`;ctx.lineWidth=2;ctx.setLineDash([5,6]);
+    ctx.beginPath();ctx.arc(cx,y,half*0.93,0,7);ctx.stroke();ctx.setLineDash([])}
+  const lw=cx-half, rx=cx+half;
+  ctx.fillStyle=dk;rr(-10,y-BAR_H/2+4,lw+10,BAR_H,11);ctx.fill();rr(rx,y-BAR_H/2+4,LW-rx+10,BAR_H,11);ctx.fill();
+  ctx.fillStyle=col;rr(-10,y-BAR_H/2,lw+10,BAR_H,11);ctx.fill();rr(rx,y-BAR_H/2,LW-rx+10,BAR_H,11);ctx.fill();
+  // little nubs at the lips
+  ctx.fillStyle="rgba(255,255,255,.35)";ctx.beginPath();ctx.arc(lw-6,y-3,3,0,7);ctx.arc(rx+6,y-3,3,0,7);ctx.fill();
+  if(g.done&&g.res&&T-g.resT<.25){ctx.fillStyle=`rgba(255,255,255,${.5-(T-g.resT)*2})`;rr(-10,y-BAR_H/2,lw+10,BAR_H,11);ctx.fill();rr(rx,y-BAR_H/2,LW-rx+10,BAR_H,11);ctx.fill()}
+}
+function drawBlob(){
+  if(blobVis<=0)return;
+  const s=skin(), cx=LW/2, cy=BY, glow=R&&state!=="home"&&state!=="over"?R.glow:3;
+  // squeeze when a gate overlaps the blob
+  let sx=1, sy=1;
+  if(R&&state==="play")for(const g of R.gates){const dy=Math.abs(g.y-cy);if(dy<blobR+BAR_H/2){const over=(2*blobR)/g.cur;if(over>.93){const k=clamp((over-.93)*4,0,.18)*(1-dy/(blobR+BAR_H/2));sx-=k;sy+=k*.8}}}
+  const w=Math.sin(wob)*(holding?.035:.015); sx+=w; sy-=w;
+  if(squish>0){sx+=squish*.6;sy-=squish*.5}
+  const r=blobR, dim=[0,.45,.75,1][clamp(glow,0,3)];
+  ctx.save();ctx.globalAlpha=blobVis;ctx.translate(cx,cy);
+  // halo
+  const halo=ctx.createRadialGradient(0,0,r*.6,0,0,r*2.1);halo.addColorStop(0,hexA(s.c,.35*dim));halo.addColorStop(1,hexA(s.c,0));
+  ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,r*2.1,0,7);ctx.fill();
+  ctx.scale(sx,sy);
+  const body=ctx.createRadialGradient(-r*.35,-r*.4,r*.1,0,0,r);
+  if(s.id==="aurora"){body.addColorStop(0,"#ffffff");body.addColorStop(.45,"#9ff5e6");body.addColorStop(1,"#8a6cff")}
+  else{body.addColorStop(0,mix(s.c,"#ffffff",.45));body.addColorStop(.6,s.c);body.addColorStop(1,s.d)}
+  ctx.fillStyle=body;ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.fill();
+  if(dim<1){ctx.fillStyle=`rgba(15,29,48,${(1-dim)*.65})`;ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.fill()}
+  // face: eyes squint when tight
+  const tight = R&&state==="play"&&R.gates.some(g=>!g.done&&g.y>BY-90&&2*r>g.cur*.9);
+  const ex=r*.32, ey=-r*.08, er=Math.max(1.6,r*.09);
+  ctx.fillStyle="#2a1a22";
+  if(state==="dying"&&R&&R.end==="crash"){ctx.lineWidth=Math.max(1.5,r*.06);ctx.strokeStyle="#2a1a22";for(const sgn of[-1,1]){ctx.beginPath();ctx.moveTo(sgn*ex-er,ey-er);ctx.lineTo(sgn*ex+er,ey+er);ctx.moveTo(sgn*ex+er,ey-er);ctx.lineTo(sgn*ex-er,ey+er);ctx.stroke()}}
+  else if(tight||holding&&r>70){ctx.lineWidth=Math.max(1.5,r*.06);ctx.strokeStyle="#2a1a22";ctx.lineCap="round";for(const sgn of[-1,1]){ctx.beginPath();ctx.moveTo(sgn*ex-er,ey);ctx.lineTo(sgn*ex+er,ey);ctx.stroke()}}
+  else{const blink=(T%3.6)<.12?.2:1;for(const sgn of[-1,1]){ctx.beginPath();ctx.ellipse(sgn*ex,ey,er,er*blink,0,0,7);ctx.fill()}}
+  // cheeks
+  ctx.fillStyle="rgba(255,120,120,.25)";ctx.beginPath();ctx.arc(-ex*1.45,ey+r*.18,r*.1,0,7);ctx.arc(ex*1.45,ey+r*.18,r*.1,0,7);ctx.fill();
+  // shine
+  ctx.fillStyle="rgba(255,255,255,.5)";ctx.beginPath();ctx.ellipse(-r*.42,-r*.48,r*.16,r*.09,-.6,0,7);ctx.fill();
+  ctx.restore();
+}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&255},${n&255},${a})`}
+function mix(a,b,t){const A=parseInt(a.slice(1),16),B=parseInt(b.slice(1),16);const c=(s)=>Math.round(lerp(A>>s&255,B>>s&255,t));return`rgb(${c(16)},${c(8)},${c(0)})`}
+
+// ---------- flow ----------
+function startRun(){
+  if(maybeInterstitial())return;
+  newRun(); state="play"; freezeUntil=T+(R.first?0:.0);
+  show("hud"); updateHud(); SFX.ui();
+}
+function gameOver(){
+  state="over"; S.runs++; runsSinceInter++; blobVis=1;
+  const isBest=R.score>S.best, prevBest=S.best; if(isBest)S.best=R.score;
+  S.coins+=R.coins;
+  // missions & xp
+  const done=trackMissions(R);
+  const xpGain=R.score+R.passed; S.xp+=xpGain; let leveled=[];
+  while(S.xp>=xpNeed(S.level)){S.xp-=xpNeed(S.level);S.level++;S.coins+=20;leveled.push(S.level)}
+  save();
+  $("oScore").textContent=R.score;
+  $("oBestWrap").innerHTML=isBest&&R.score>0?'<span class="newbest">New best</span>':`<div class="lbl">Best ${S.best}</div>`;
+  let msg="";
+  if(R.end==="crash") msg=S.runs<=3?"Too big! Let go to shrink.":"Squished!";
+  else msg=S.runs<=3?"Too loose! Hold to grow.":"Faded out. Fit tighter!";
+  if(!isBest&&prevBest-R.score<=Math.max(3,Math.round(prevBest*.15))&&R.score>0) msg=`Only ${prevBest-R.score+1} more to beat your best!`;
+  if(isBest&&prevBest>0) msg=`+${R.score-prevBest} over your old best`;
+  $("oMsg").textContent=msg;
+  $("oGates").textContent=R.passed;$("oPerf").textContent=R.perfects;$("oCoins").textContent=R.coins;
+  $("bDouble").hidden=!(R.coins>=3&&!R.doubled);
+  show("over"); overLock=performance.now()+700;
+  done.forEach((m,i)=>setTimeout(()=>{toast(`Mission done: +${m.rw}`);SFX.reward()},300+i*500));
+  leveled.forEach((l,i)=>setTimeout(()=>{toast(`Level ${l}! +20`);const th=THEMES.find(t=>t.lvl===l);if(th)setTimeout(()=>toast(`New theme: ${th.name}`),600)},400+(done.length+i)*500));
+}
+let overLock=0;
+function continueRun(){
+  R.cont=true; R.glow=3; R.chain=0; blobR=30; blobVis=1; sinceToggle=0;
+  R.gates=R.gates.filter(g=>g.y<BY-260);
+  if(!R.gates.length)makeGate(BY-300);
+  state="play"; freezeUntil=T+1.1; show("hud"); updateHud();
+}
+function goHome(){state="home";R=null;show("home");renderHome()}
+
+function show(id){for(const k of["home","hud","over"])$(k).hidden=k!==id}
+let lastMult=1;
+function updateHud(bump){
+  if(!R)return; $("score").textContent=R.score;
+  [...$("pips").children].forEach((p,i)=>p.classList.toggle("off",i>=R.glow));
+  const m=1+Math.min(4,Math.floor(R.chain/3)); $("mult").textContent=m>1?`×${m}`:"";
+  if(bump&&m!==lastMult){$("mult").style.transform="scale(1.5)";setTimeout(()=>$("mult").style.transform="",150)} lastMult=m;
+}
+function toast(t){const d=document.createElement("div");d.className="toast";d.innerHTML=`<span class="coin"></span>${t}`;$("toasts").appendChild(d);setTimeout(()=>d.remove(),2700)}
+
+// ---------- ads (simulated; Unity build calls LevelPlay here) ----------
+function showAd(kind,onDone){
+  const isReward=kind!=="interstitial";
+  const d=document.createElement("div");d.className="adfake";
+  let left=isReward?3:2;
+  d.innerHTML=`<div class="k">${isReward?"Rewarded video":"Interstitial"} · simulated</div><div class="t">Your ad here</div><div class="k" id="adc">${left}s</div>`;
+  $("stage").appendChild(d); holding=false;
+  const iv=setInterval(()=>{left--;const c=d.querySelector("#adc");if(left>0){c.textContent=left+"s"}else{clearInterval(iv);
+    const b=document.createElement("button");b.className="btn primary";b.style.maxWidth="220px";b.textContent=isReward?"Claim reward":"Close";
+    b.onclick=(e)=>{e.stopPropagation();d.remove();if(isReward)lastRewardedAt=performance.now();onDone&&onDone(true)};c.replaceWith(b)}},1000);
+}
+// Policy: never in first session, never before run 6, at most every 4th run, 150s+ into the session, and not within 90s of a rewarded ad.
+function maybeInterstitial(){
+  const sess=(performance.now()-sessionStart)/1000;
+  if(S.sessions>1&&S.runs>=6&&runsSinceInter>=4&&sess>150&&performance.now()-lastRewardedAt>90000){
+    runsSinceInter=0; showAd("interstitial",()=>{newRun();state="play";show("hud");updateHud()}); return true;}
+  return false;
+}
+
+// ---------- missions ----------
+function ensureMissions(){
+  const key=todayKey();
+  if(S.mDay===key&&S.missions.length===3)return;
+  const rnd=seeded(key), pool=[...MISSION_POOL], out=[];
+  while(out.length<3){const i=Math.floor(rnd()*pool.length);const m=pool.splice(i,1)[0];out.push({k:m.k,t:m.t,rw:m.rw,p:0,done:false})}
+  S.mDay=key;S.missions=out;save();
+}
+function trackMissions(r){
+  ensureMissions(); const done=[];
+  for(const m of S.missions){if(m.done)continue;
+    const v={perfRun:r.perfects,chain:r.bestChain,gatesRun:r.passed,scoreRun:r.score}[m.k];
+    if(v!==undefined) m.p=Math.max(m.p,v);
+    else if(m.k==="runs") m.p++;
+    else if(m.k==="coins") m.p+=r.coins;
+    else if(m.k==="squeeze") m.p+=r.squeezes;
+    else if(m.k==="gold") m.p+=r.gold;
+    if(m.p>=m.t){m.p=m.t;m.done=true;S.coins+=m.rw;done.push(m)}}
+  return done;
+}
+
+// ---------- daily streak ----------
+function checkStreak(){
+  const key=todayKey();
+  if(S.lastDay===key)return null;
+  if(S.lastDay&&dayDiff(S.lastDay,key)===1)S.streak++; else S.streak=1;
+  S.lastDay=key;
+  const idx=(S.streak-1)%7, coins=STREAK_REWARDS[idx]; S.coins+=coins;
+  let gift=null; if(idx===6&&!S.skins.includes("aurora")){S.skins.push("aurora");gift="Aurora skin"}
+  save(); return {coins,gift,idx};
+}
+function streakModal(info){
+  const m=document.createElement("div");m.className="modal";
+  const days=STREAK_REWARDS.map((c,i)=>`<div class="day ${i<info.idx?"got":i===info.idx?"now":""}"><span>D${i+1}</span><span>${i===6?"Gift":c}</span></div>`).join("");
+  m.innerHTML=`<div class="card"><div class="lbl" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800">Daily streak</div>
+   <h3>Day ${S.streak}</h3><div class="days">${days}</div>
+   <p class="note" style="color:var(--cream);font-size:15px">+${info.coins} coins${info.gift?` and the ${info.gift}`:""}. Come back tomorrow for more.</p>
+   <button class="btn primary" id="bClaim">Claim</button></div>`;
+  $("stage").appendChild(m);
+  m.querySelector("#bClaim").onclick=e=>{e.stopPropagation();SFX.reward();m.remove();renderHome();toast(`+${info.coins} coins`)};
+}
+
+// ---------- home & sheets ----------
+function renderHome(){
+  ensureMissions();
+  $("hCoins").textContent=S.coins;$("hLvl").textContent=S.level;$("hStreak").textContent=S.streak||1;$("hBest").textContent=S.best;
+  $("hXp").style.width=Math.round(S.xp/xpNeed(S.level)*100)+"%";
+  const now=new Date(),mid=new Date(now);mid.setHours(24,0,0,0);const h=Math.floor((mid-now)/36e5),mm=Math.floor((mid-now)/6e4)%60;
+  $("mReset").textContent=`New in ${h}h ${mm}m`;
+  $("mList").innerHTML=S.missions.map(m=>{const def=MISSION_POOL.find(d=>d.k===m.k);
+    return `<div class="mis ${m.done?"done":""}"><span>${def.txt(m.t)}</span><span class="rw">${m.done?"Done":`<span class="coin"></span>${m.rw}`}</span>
+    <span class="pb"><i style="width:${Math.round(m.p/m.t*100)}%"></i></span></div>`}).join("");
+}
+function sheet(html){
+  const wrap=document.createElement("div");wrap.className="modal";wrap.style.background="rgba(6,12,22,.5)";wrap.style.placeItems="end stretch";wrap.style.padding="0";
+  wrap.innerHTML=`<div class="sheet">${html}</div>`;$("stage").appendChild(wrap);
+  wrap.addEventListener("pointerdown",e=>{e.stopPropagation();if(e.target===wrap)wrap.remove()});
+  return wrap;
+}
+function skinsSheet(){
+  const w=sheet(`<h3>Looks <button class="iconbtn" data-x aria-label="Close">✕</button></h3>
+   <h4>Blobs · you have <span class="coin" style="display:inline-block;vertical-align:-2px"></span> ${S.coins}</h4>
+   <div class="grid">${SKINS.map(s=>{const own=S.skins.includes(s.id);
+     const bg=s.id==="aurora"?"radial-gradient(circle at 35% 30%,#fff,#9ff5e6 45%,#8a6cff)":`radial-gradient(circle at 35% 30%,#fff 0,${s.c} 45%,${s.d})`;
+     return `<button class="skin ${S.skin===s.id?"sel":""} ${own?"":"locked"}" data-skin="${s.id}"><span class="ball" style="background:${bg}"></span>${s.name}
+     <small>${own?(S.skin===s.id?"Wearing":"Owned"):s.cost<0?s.note:`<span class="coin"></span>${s.cost}`}</small></button>`}).join("")}</div>
+   <h4>Ponds · unlock by level</h4>
+   <div class="grid">${THEMES.map(t=>{const own=S.level>=t.lvl;return `<button class="skin ${S.theme===t.id?"sel":""} ${own?"":"locked"}" data-theme="${t.id}">
+     <span class="ball" style="border-radius:12px;background:linear-gradient(${t.top},${t.bot});box-shadow:inset 0 -10px 0 ${t.gate}"></span>${t.name}<small>${own?(S.theme===t.id?"In use":"Unlocked"):`Level ${t.lvl}`}</small></button>`}).join("")}</div>`);
+  w.querySelector("[data-x]").onclick=()=>w.remove();
+  w.querySelectorAll("[data-skin]").forEach(b=>b.onclick=()=>{const s=SKINS.find(x=>x.id===b.dataset.skin);
+    if(S.skins.includes(s.id)){S.skin=s.id}else if(s.cost>0&&S.coins>=s.cost){S.coins-=s.cost;S.skins.push(s.id);S.skin=s.id;SFX.reward();toast(`${s.name} unlocked`)}
+    else{SFX.loose();toast(s.cost<0?"Reach a 7-day streak":`Need ${s.cost-S.coins} more coins`);return}
+    save();renderHome();w.remove();skinsSheet()});
+  w.querySelectorAll("[data-theme]").forEach(b=>b.onclick=()=>{const t=THEMES.find(x=>x.id===b.dataset.theme);
+    if(S.level<t.lvl){SFX.loose();toast(`Reach level ${t.lvl}`);return} S.theme=t.id;save();w.remove();skinsSheet()});
+}
+function settingsSheet(){
+  const w=sheet(`<h3>Settings <button class="iconbtn" data-x aria-label="Close">✕</button></h3>
+   <div class="toggle"><span>Sound</span><button class="sw" id="swS" aria-pressed="${S.sound}" aria-label="Sound"></button></div>
+   <div class="toggle"><span>Vibration</span><button class="sw" id="swH" aria-pressed="${S.haptics}" aria-label="Vibration"></button></div>
+   <h4>About this prototype</h4>
+   <p class="note">Ads here are simulated. Rewarded ads appear only when you choose them. A short interstitial can appear between runs from the second session on, at most every 4th run, never within 90 seconds of a rewarded ad.</p>
+   <p class="note">Runs played: ${S.runs} · Sessions: ${S.sessions}</p>
+   <button class="btn" id="bReset" style="color:var(--danger)">Reset all progress</button>`);
+  w.querySelector("[data-x]").onclick=()=>w.remove();
+  w.querySelector("#swS").onclick=e=>{S.sound=!S.sound;e.currentTarget.setAttribute("aria-pressed",S.sound);if(!S.sound&&humGain)humGain.gain.value=0;save()};
+  w.querySelector("#swH").onclick=e=>{S.haptics=!S.haptics;e.currentTarget.setAttribute("aria-pressed",S.haptics);buzz(15);save()};
+  const rb=w.querySelector("#bReset");let armed=false;
+  rb.onclick=()=>{if(!armed){armed=true;rb.textContent="Tap again to erase everything";return}
+    S=Object.assign({},DEF,{sessions:1});save();w.remove();const info=checkStreak();renderHome();if(info)streakModal(info)};
+}
+
+// ---------- input ----------
+const stage=$("stage");
+function isUI(t){return t.closest&&t.closest("button,.card,.sheet,.modal,.adfake")}
+stage.addEventListener("pointerdown",e=>{
+  if(isUI(e.target))return;
+  e.preventDefault(); audio();
+  if(paused){paused=false;last=performance.now()}
+  if(state==="home"){startRun();holding=true;return}
+  if(state==="over"){if(performance.now()<overLock)return;startRun();holding=true;return}
+  if(state==="play")holding=true;
+});
+const release=()=>{holding=false};
+window.addEventListener("pointerup",release);window.addEventListener("pointercancel",release);
+window.addEventListener("keydown",e=>{if(e.code==="Space"&&!e.repeat){e.preventDefault();audio();if(state==="home"||(state==="over"&&performance.now()>overLock)){startRun()}if(paused)paused=false;holding=true}});
+window.addEventListener("keyup",e=>{if(e.code==="Space")holding=false});
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&state==="play"){paused=true;holding=false}});
+stage.addEventListener("contextmenu",e=>e.preventDefault());
+
+$("bSkins").onclick=()=>{SFX.ui();skinsSheet()};
+$("bSet").onclick=()=>{SFX.ui();settingsSheet()};
+$("bRetry").onclick=()=>{if(state==="over")startRun()};
+$("bHome").onclick=()=>{SFX.ui();goHome()};
+$("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
+
+// ---------- boot ----------
+function boot(){
+  resize(); ensureMissions(); renderHome(); show("home");
+  const info=checkStreak(); if(info) streakModal(info);
+  requestAnimationFrame(t=>{last=t;frame(t)});
+}
+window.claude?.hot?.snapshot?.(()=>({}));
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</html>
