@@ -130,7 +130,21 @@ const res = await page.evaluate(() => ({ score: +document.getElementById("oScore
   medal: document.getElementById("oMedal").textContent, share: !document.getElementById("bShare").hidden }));
 check(res.score === res.real && res.real > 0, `results show the final score after the count-up (${res.real})`);
 check(/MEDAL/.test(res.medal), `a medal is shown (${res.medal.trim()})`);
-await page.click("#bShare"); await page.waitForTimeout(600);
+// Sharing sits behind a parental gate: a wrong answer shares nothing, the right one goes through.
+await page.click("#bShare"); await page.waitForTimeout(400);
+const gate = async () => page.evaluate(() => { const q = document.querySelector(".gateq"); if (!q) return null;
+  const [a, b] = q.textContent.match(/\d+/g).map(Number); return { ans: a * b, opts: [...document.querySelectorAll(".gate [data-a]")].map((x) => +x.dataset.a) }; });
+const g1 = await gate();
+check(!!g1 && g1.opts.length === 4 && g1.opts.includes(g1.ans), "share button asks a grown-up first (parental gate)");
+if (g1) await page.click(`.gate [data-a="${g1.opts.find((o) => o !== g1.ans)}"]`);
+await page.waitForTimeout(400);
+const leaked = await page.evaluate(() => !!document.querySelector(".linkbox") || /copied/i.test(document.querySelector(".toast")?.textContent || ""));
+check(!leaked && !(await gate()), "a wrong answer closes the gate without sharing");
+await page.click("#bShare"); await page.waitForTimeout(400);
+const g2 = await gate();
+if (g2) await page.click(`.gate [data-a="${g2.ans}"]`);
+await page.waitForTimeout(600);
+await shot(page, "share-after-gate");
 const shared = await page.evaluate(() => (document.querySelector(".linkbox") || document.querySelector(".toast") || {}).textContent || "");
 check(/\?c=\d+-\d+/.test(shared) || /copied/i.test(shared), `challenge button produces a link (${shared.slice(-40)})`);
 if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link"); await page.click("[data-x]"); await page.waitForTimeout(200); }

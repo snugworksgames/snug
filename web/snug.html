@@ -227,6 +227,8 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .medalnext{font-size:12px;font-weight:900;color:var(--muted)}
 .rbtn.purple{--c:var(--purple);--cd:var(--purpleD)}
 .chalscore{font-family:var(--display);font-size:72px;line-height:1}
+.gate{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gateq{font-family:var(--display);font-size:40px;color:var(--ink)}
 .linkbox{font-family:var(--body);font-size:13px;font-weight:800;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;word-break:break-all;-webkit-user-select:text;user-select:text}
 @media (prefers-reduced-motion:reduce){.holdhint,.logo h1 span{animation:none}*{animation-duration:.01s!important}}
 </style>
@@ -988,6 +990,20 @@ function goHome(){
   show("home");renderHome();
 }
 
+// ---------- parental gate: a grown-up answers a sum before anything leaves the game ----------
+// Shown before sharing (and, in the store app, before any outside link or purchase). A wrong answer closes it;
+// the next try asks a new question, so guessing doesn't help much.
+function parentGate(onPass){
+  const a=6+Math.floor(Math.random()*7), b=6+Math.floor(Math.random()*4), ans=a*b;
+  const opts=new Set([ans]);
+  while(opts.size<4){const o=ans+(Math.floor(Math.random()*5)+1)*(Math.random()<.5?-1:1)*(Math.random()<.5?1:a);if(o>0)opts.add(o)}
+  const list=[...opts].sort(()=>Math.random()-.5);
+  const m=panel("ASK A GROWN-UP","var(--blue)",`<div class="msg">Grown-ups only: what is</div><div class="gateq">${a} × ${b} ?</div>
+    <div class="gate">${list.map(o=>`<button class="btn blue" data-a="${o}">${o}</button>`).join("")}</div>`,{cls:"gatep"});
+  m.querySelectorAll("[data-a]").forEach(btn=>btn.onclick=e=>{e.stopPropagation();m.remove();
+    if(+btn.dataset.a===ans){SFX.ui();onPass()} else {SFX.loose();toast("Not quite. Ask a grown-up to help!","x")}});
+}
+
 // ---------- challenge a friend: a link that carries this run's seed and score ----------
 function shareChallenge(){
   const url=location.href.split(/[?#]/)[0]+`?c=${R.seed}-${R.score}`;
@@ -1216,7 +1232,7 @@ document.addEventListener("visibilitychange",()=>{
 });
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 $("bPause").onclick=()=>{if(state==="play"&&!paused){paused=true;holding=false;humSet(true)}};
-$("bShare").onclick=()=>{SFX.ui();shareChallenge()};
+$("bShare").onclick=()=>{SFX.ui();parentGate(shareChallenge)};
 
 $("bSkins").onclick=()=>{SFX.ui();skinsPanel()};
 $("bMis").onclick=()=>{SFX.ui();missionsPanel()};
@@ -1227,7 +1243,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="5";
+const BUILD="6";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
