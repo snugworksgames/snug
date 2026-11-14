@@ -8,6 +8,7 @@
 //   docs/icons/maskable-512.png                Android adaptive icon (art kept inside the safe zone)
 //   docs/icons/apple-touch-icon.png (180)      iPhone home screen
 //   store/icon-1024.png, store/icon-512.png    App Store and Google Play listings
+//   android/app/src/main/res/...               Android app: launcher icons (legacy, round, adaptive) and splash screens
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -94,13 +95,48 @@ const targets = [
   ["store/icon-512.png", 512, 1],
 ];
 
+// Android launcher icons per density: legacy square, round (circle cut) and the adaptive-icon foreground
+// (full-bleed artwork kept inside the 66/108 safe zone; the background layer is the same sky colour).
+const RES = "android/app/src/main/res";
+for (const [d, n] of [["mdpi", 48], ["hdpi", 72], ["xhdpi", 96], ["xxhdpi", 144], ["xxxhdpi", 192]]) {
+  targets.push([`${RES}/mipmap-${d}/ic_launcher.png`, n, 1]);
+  targets.push([`${RES}/mipmap-${d}/ic_launcher_round.png`, n, 0.86, "round"]);
+  targets.push([`${RES}/mipmap-${d}/ic_launcher_foreground.png`, n * 2.25, 0.62]);
+}
+// Splash screens: the sky with the icon in the middle, at the sizes Capacitor's template uses.
+const splashes = [["drawable", 480, 320]];
+for (const [d, w, h] of [["mdpi", 320, 480], ["hdpi", 480, 800], ["xhdpi", 720, 1280], ["xxhdpi", 960, 1600], ["xxxhdpi", 1280, 1920]]) {
+  splashes.push([`drawable-port-${d}`, w, h], [`drawable-land-${d}`, h, w]);
+}
+for (const [dir, w, h] of splashes) targets.push([`${RES}/${dir}/splash.png`, Math.round(Math.min(w, h) * 0.42), 1, "splash", w, h]);
+
+// Wraps the square icon: a circle cut for round launcher icons, or centred on a sky backdrop for splash screens.
+function frame(mode, w, h) {
+  const icon = document.querySelector("canvas");
+  const cv = document.createElement("canvas");
+  cv.width = mode === "splash" ? w : icon.width; cv.height = mode === "splash" ? h : icon.height;
+  const c = cv.getContext("2d");
+  if (mode === "round") {
+    c.beginPath(); c.arc(cv.width / 2, cv.height / 2, cv.width / 2, 0, 7); c.clip(); c.drawImage(icon, 0, 0);
+  } else {
+    const sky = c.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, "#4fbdf0"); sky.addColorStop(1, "#c9f1ff");
+    c.fillStyle = sky; c.fillRect(0, 0, w, h);
+    const s = icon.width, x = (w - s) / 2, y = (h - s) / 2, r = s * 0.22;
+    c.save(); c.beginPath(); c.roundRect(x, y, s, s, r); c.clip(); c.drawImage(icon, x, y); c.restore();
+    c.lineWidth = Math.max(2, s * 0.025); c.strokeStyle = "#2b2040"; c.beginPath(); c.roundRect(x, y, s, s, r); c.stroke();
+  }
+  document.body.replaceChildren(cv);
+}
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ deviceScaleFactor: 1 });
 await page.setContent("<body style='margin:0'></body>");
-for (const [file, size, art] of targets) {
+for (const [file, size, art, mode, w, h] of targets) {
   mkdirSync(dirname(join(root, file)), { recursive: true });
-  await page.setViewportSize({ width: size, height: size });
+  await page.setViewportSize({ width: w || size, height: h || size });
   await page.evaluate(([fn, s, a]) => new Function(`return (${fn})`)()(s, a), [paint.toString(), size, art]);
+  if (mode) await page.evaluate(([fn, m, fw, fh]) => new Function(`return (${fn})`)()(m, fw, fh), [frame.toString(), mode, w, h]);
   await page.locator("canvas").screenshot({ path: join(root, file) });
   console.log("wrote", file);
 }

@@ -1,0 +1,73 @@
+# Builds the Snug Android app from the web game.
+#   Every run:  a debug APK you can install on a phone to try it (Google's test ads).
+#   With the upload key saved as secrets: a signed app bundle (.aab) ready for Google Play.
+#
+# Repository settings → Secrets and variables → Actions:
+#   Secrets   SNUG_KEYSTORE_BASE64, SNUG_KEYSTORE_PASSWORD, SNUG_KEY_ALIAS, SNUG_KEY_PASSWORD   (upload key)
+#   Variables ADMOB_APP_ID, SNUG_ADMOB_REWARDED, SNUG_ADMOB_INTERSTITIAL   (leave unset for Google's test ads)
+#             SNUG_SHARE_BASE   (public address of the web game, for challenge links)
+name: Android app
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["web/**", "app/**", "android/**", "tools/build*.mjs", "package*.json", "capacitor.config.json", ".github/workflows/android.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SNUG_VERSION_CODE: ${{ github.run_number }}
+      SNUG_VERSION_NAME: "1.0.${{ github.run_number }}"
+      ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+      SNUG_ADMOB_REWARDED: ${{ vars.SNUG_ADMOB_REWARDED }}
+      SNUG_ADMOB_INTERSTITIAL: ${{ vars.SNUG_ADMOB_INTERSTITIAL }}
+      SNUG_SHARE_BASE: ${{ vars.SNUG_SHARE_BASE }}
+      HAS_UPLOAD_KEY: ${{ secrets.SNUG_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Build the web game and the app's web files
+        run: |
+          npm ci
+          node tools/build.mjs
+          node tools/build-app.mjs
+          npx cap sync android
+
+      - name: Build debug APK (for trying on a phone)
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Build signed app bundle for Google Play
+        if: env.HAS_UPLOAD_KEY == 'true'
+        working-directory: android
+        env:
+          SNUG_KEYSTORE_BASE64: ${{ secrets.SNUG_KEYSTORE_BASE64 }}
+          SNUG_KEYSTORE_PASSWORD: ${{ secrets.SNUG_KEYSTORE_PASSWORD }}
+          SNUG_KEY_ALIAS: ${{ secrets.SNUG_KEY_ALIAS }}
+          SNUG_KEY_PASSWORD: ${{ secrets.SNUG_KEY_PASSWORD }}
+        run: |
+          echo "$SNUG_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          SNUG_KEYSTORE="$RUNNER_TEMP/upload.jks" ./gradlew --no-daemon bundleRelease
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snug-android-${{ github.run_number }}
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: warn

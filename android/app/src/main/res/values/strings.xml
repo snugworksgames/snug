@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Snug</string>
+    <string name="title_activity_main">Snug</string>
+    <string name="package_name">com.snugworks.snug</string>
+    <string name="custom_url_scheme">com.snugworks.snug</string>
+</resources>

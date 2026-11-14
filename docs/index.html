@@ -989,7 +989,7 @@ function gameOver(){
   $("oMsg").textContent=msg;
   $("oGates").textContent=R.passed;$("oPerf").textContent=R.perfects;$("oCoins").textContent=R.coins;
   $("bDouble").hidden=!(ADS&&R.coins>=3&&!R.doubled);
-  $("bShare").hidden=R.score<1||!(LIVE||location.protocol==="file:"||location.hostname==="localhost");   // previews have no shareable address
+  $("bShare").hidden=R.score<1||!(window.SNUG_SHARE_BASE||LIVE||location.protocol==="file:"||location.hostname==="localhost");   // previews have no shareable address
   if(R.zone<ZONE_AT.length-1){const nx=ZONE_AT[R.zone+1];
     $("oZone").innerHTML=`<span>Next zone: <b>${THEMES[R.zone+1].name}</b> at gate ${nx}</span><span class="pb"><i style="width:${Math.round(R.passed/nx*100)}%"></i><span>${R.passed}/${nx}</span></span>`}
   else $("oZone").innerHTML=`<span>You reached the final zone: <b>${THEMES[R.zone].name}</b>!</span>`;
@@ -1027,7 +1027,7 @@ function parentGate(onPass){
 
 // ---------- challenge a friend: a link that carries this run's seed and score ----------
 function shareChallenge(){
-  const url=location.href.split(/[?#]/)[0]+`?c=${R.seed}-${R.score}`;
+  const url=(window.SNUG_SHARE_BASE||location.href.split(/[?#]/)[0])+`?c=${R.seed}-${R.score}`;   // the store app links to the public web game
   const text=`I scored ${R.score} in Snug! You get the exact same gates. Can you beat me?`;
   const fallback=()=>{const m=panel("CHALLENGE","var(--purple)",`<div class="msg">Copy this link and send it to a friend:</div><div class="linkbox">${url}</div>`);return m};
   if(navigator.share){navigator.share({title:"Snug",text,url}).catch(e=>{if(!e||e.name!=="AbortError")fallback()});return}
@@ -1264,7 +1264,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="6";
+const BUILD="7";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{

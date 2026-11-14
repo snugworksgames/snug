@@ -15,3 +15,7 @@
 # Packaged copies
 *.zip
 .DS_Store
+
+# Android app build
+node_modules/
+app/www/
