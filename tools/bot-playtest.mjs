@@ -1,0 +1,172 @@
+#!/usr/bin/env node
+// Automated playtest: a bot plays the real built game in headless Chromium and checks the main flows.
+//
+//   node tools/build.mjs && node tools/bot-playtest.mjs [screenshot-dir]
+//
+// Checks: no page errors, a full bot run with every mechanic, buying and wearing a hat, results screen,
+// challenge link round trip (a second player gets the identical gate sequence).
+import { createRequire } from "node:module";
+import { createServer } from "node:http";
+import { readFileSync, existsSync, mkdirSync } from "node:fs";
+import { dirname, join, extname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const require = createRequire(import.meta.url);
+const { chromium, devices } = require("playwright");
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const shots = process.argv[2] || null;
+if (shots) mkdirSync(shots, { recursive: true });
+
+// Tiny static server for docs/. The page gets one extra line that exposes game state to the bot.
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json" };
+const server = createServer((req, res) => {
+  let path = decodeURIComponent(req.url.split("?")[0]);
+  if (path.endsWith("/")) path += "index.html";
+  const file = join(root, "docs", path);
+  if (!file.startsWith(join(root, "docs")) || !existsSync(file)) { res.writeHead(404); res.end(); return; }
+  let data = readFileSync(file);
+  if (path.endsWith("index.html")) {
+    data = data.toString().replace("function boot(){", "window.__g=()=>({R,blobR,state,BY,CH,S});function boot(){");
+  }
+  res.writeHead(200, { "content-type": TYPES[extname(file)] || "application/octet-stream" });
+  res.end(data);
+});
+await new Promise((r) => server.listen(0, r));
+const base = `http://localhost:${server.address().port}/`;
+
+const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+const errors = [];
+const failures = [];
+const check = (ok, what) => { console.log(`${ok ? "PASS" : "FAIL"}  ${what}`); if (!ok) failures.push(what); };
+const shot = async (page, name) => { if (shots) await page.screenshot({ path: join(shots, name + ".png") }); };
+
+async function open(browser, url, save) {
+  const ctx = await browser.newContext({ ...devices["iPhone 13"], deviceScaleFactor: 1 });
+  if (save) await ctx.addInitScript((s) => { if (!localStorage.getItem("snug.v1")) localStorage.setItem("snug.v1", JSON.stringify(s)); }, save);
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+  await page.goto(url);
+  await page.waitForTimeout(700);
+  return page;
+}
+
+// Plays until the run ends or `maxMs` passes. Aims a little under the gap (or over it for glass).
+async function play(page, maxMs, { takeRevive = true, label = "run" } = {}) {
+  const box = await page.locator("#cv").boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.45);
+  await page.mouse.down();
+  let down = true, peak = { passed: 0, chain: 0, layout: new Map() }, sawFire = false;
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs) {
+    const s = await page.evaluate(() => {
+      const g = window.__g(); if (!g.R) return { state: g.state };
+      const ng = g.R.gates.find((x) => !x.done), gem = g.R.gems.find((m) => !m.done && m.y < g.BY && m.y > (ng ? ng.y : -999));
+      return { state: g.state, r: g.blobR, passed: g.R.passed, chain: g.R.chain, type: ng && ng.type, gap: ng && ng.cur, gy: ng && ng.y, BY: g.BY,
+        gemdx: gem ? Math.abs(gem.x - 180) : 0, gemy: gem ? gem.y : 0,
+        specs: g.R.gates.map((x) => [x.n, [Math.round(x.base * 10) / 10, x.type, !!x.box, !!x.twin, !!x.gold].join(":")]) };
+    });
+    for (const [n, spec] of s.specs || []) peak.layout.set(n, spec);
+    if (s.state === "revive") {
+      if (down) { await page.mouse.up(); down = false; }
+      await page.click(takeRevive ? "#rvYes" : "#rvNo"); await page.waitForTimeout(200); continue;
+    }
+    if (s.state === "over") break;
+    if (s.state !== "play") { await page.waitForTimeout(40); continue; }
+    peak.passed = Math.max(peak.passed, s.passed); peak.chain = Math.max(peak.chain, s.chain);
+    if (s.chain >= 6 && !sawFire) { sawFire = true; await shot(page, `${label}-on-fire`); }
+    let target = s.type === "glass" ? s.gap / 2 + 6 : (s.gap * 0.92) / 2;
+    if (s.gemdx && s.gemy > s.gy && s.BY - s.gemy < 120) target = s.gemdx - 6;
+    const want = s.r < target;
+    if (want && !down) { await page.mouse.down(); down = true; } else if (!want && down) { await page.mouse.up(); down = false; }
+    await page.waitForTimeout(12);
+  }
+  if (down) await page.mouse.up();
+  return peak;
+}
+// Lets the current run end (declining the revive) and waits for the results screen.
+async function finish(page) {
+  await page.mouse.up();
+  await page.waitForFunction(() => ["over", "revive"].includes(window.__g().state), null, { timeout: 60000 });
+  if (await page.locator("#rvNo").isVisible()) await page.click("#rvNo");
+  await page.waitForFunction(() => window.__g().state === "over", null, { timeout: 10000 });
+  await page.waitForTimeout(1500);
+}
+const startByTap = async (page) => {
+  const box = await page.locator("#cv").boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.45);
+  await page.waitForTimeout(200);
+};
+
+const browser = await chromium.launch();
+
+// 1. Brand-new player
+let page = await open(browser, base);
+check(await page.locator("#bClaim").isVisible(), "new player sees the daily reward");
+await shot(page, "new-daily");
+await page.click("#bClaim"); await page.waitForTimeout(400);
+await shot(page, "new-home");
+await page.context().close();
+
+// 2. Returning player with coins: collection, hats, a long run, results
+const rich = { best: 40, coins: 2000, xp: 10, level: 3, skins: ["peach", "mint"], skin: "peach", streak: 2, lastDay: today, runs: 9, sessions: 4,
+  seen: { gem: true, glass: true, box: true, twin: true }, zone: 1 };
+page = await open(browser, base, rich);
+await page.click("#bSkins"); await page.waitForTimeout(400);
+await shot(page, "collection");
+await page.click('[data-hat="crown"]'); await page.waitForTimeout(300);
+let st = await page.evaluate(() => window.__g().S);
+check(st.hat === "crown" && st.hats.includes("crown") && st.coins === 1400, "buying the crown costs 600 coins and equips it");
+await page.locator(".scroll").evaluate((el) => (el.scrollTop = 200)); await shot(page, "collection-hats");
+await page.click("[data-x]"); await page.waitForTimeout(200);
+await page.click("#bSet"); await page.waitForTimeout(300); await shot(page, "settings");
+await page.click("[data-x]"); await page.waitForTimeout(200);
+const peak = await play(page, 70000, { label: "crown" });
+check(peak.passed >= 30, `bot run got through ${peak.passed} gates (needs 30+)`);
+check(peak.chain >= 6, `bot reached an on-fire chain (best chain ${peak.chain})`);
+await finish(page);   // if the bot is still alive at the time limit, let go and let the run end
+await shot(page, "results");
+const res = await page.evaluate(() => ({ score: +document.getElementById("oScore").textContent, real: window.__g().R.score, seed: window.__g().R.seed,
+  medal: document.getElementById("oMedal").textContent, share: !document.getElementById("bShare").hidden }));
+check(res.score === res.real && res.real > 0, `results show the final score after the count-up (${res.real})`);
+check(/MEDAL/.test(res.medal), `a medal is shown (${res.medal.trim()})`);
+await page.click("#bShare"); await page.waitForTimeout(600);
+const shared = await page.evaluate(() => (document.querySelector(".linkbox") || document.querySelector(".toast") || {}).textContent || "");
+check(/\?c=\d+-\d+/.test(shared) || /copied/i.test(shared), `challenge button produces a link (${shared.slice(-40)})`);
+if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link"); await page.click("[data-x]"); await page.waitForTimeout(200); }
+
+// 3. Pause
+await page.click("#bRetry"); await page.waitForTimeout(600);
+await page.click("#bPause"); await page.waitForTimeout(300);
+const y1 = await page.evaluate(() => window.__g().R.gates[0].y); await page.waitForTimeout(500);
+const y2 = await page.evaluate(() => window.__g().R.gates[0].y);
+check(y1 === y2, "pause button freezes the run");
+await shot(page, "paused");
+
+// 4. Challenge link round trip: two players, same seed, same gates
+const seed = 424242, target = 55;
+const a = await open(browser, `${base}?c=${seed}-${target}`, rich);
+check(await a.locator(".chalscore").isVisible(), "challenge link opens the challenge card");
+await shot(a, "challenge-card");
+await a.click("[data-go]"); await a.waitForTimeout(300);
+await startByTap(a);
+check(await a.evaluate(() => window.__g().R.seed) === seed, "the run uses the seed from the link");
+const peakA = await play(a, 25000);
+await finish(a);
+// second player: a brand-new one (first-run pacing and intro banners must not change the layout)
+const b = await open(browser, `${base}?c=${seed}-${target}`, { ...rich, runs: 0, seen: {} });
+await b.click("[data-go]"); await b.waitForTimeout(300);
+await startByTap(b);
+const peakB = await play(b, 25000);
+const common = [...peakA.layout.keys()].filter((n) => peakB.layout.has(n));
+const same = common.every((n) => peakA.layout.get(n) === peakB.layout.get(n));
+check(same && common.length >= 15, `both players get identical gates (compared ${common.length} gates, e.g. gate 12 = ${peakA.layout.get(12)})`);
+const won = await a.evaluate(() => ({ won: window.__g().R.chWon, score: window.__g().R.score, title: document.getElementById("oTitle").textContent }));
+check(won.score > target && won.won && won.title === "YOU WIN!", `beating the target shows YOU WIN (score ${won.score} vs ${target})`);
+await shot(a, "challenge-result");
+
+check(errors.length === 0, `no page errors${errors.length ? ": " + errors.slice(0, 3).join(" | ") : ""}`);
+await browser.close();
+server.close();
+console.log(failures.length ? `\n${failures.length} check(s) failed` : "\nAll checks passed");
+process.exit(failures.length ? 1 : 0);

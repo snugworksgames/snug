@@ -6,8 +6,17 @@
 **Session:** 15–60 s runs (simulated medians: casual 17 s, regular 23 s, skilled 40 s).
 **Monetization:** rewarded ads the player chooses, plus a rare, capped interstitial. Optional "Remove ads" purchase.
 
-Playable web prototype: https://claude.ai/artifact/4amX5rMvFyEV8f9R4R3E6K
-Unity prototype: `unity/` (see `unity/README.md`).
+> **Status (build 5):** the web game (`web/snug.html`, hosted from `docs/`) is the product. It has moved past this
+> document in places: cartoon art direction, hats, music, medals, challenge links, a pause button and offline play.
+> The web build shows no ads; real ads arrive with the store app (see [LAUNCH_PLAN.md](LAUNCH_PLAN.md)).
+> The Unity prototype in `unity/` covers only the original core rules and is not kept in sync.
+
+**Added in build 5**
+- **Music and sound:** a generated soundtrack that changes key with each zone, speeds up as you climb and adds a layer while you're on fire. Separate music and sound switches.
+- **Feel:** freeze-frames on Squeeze, Smash and crash; an "ON FIRE" state at a chain of 6 with an aura and trail; speed lines; score count-up; medals at 30 / 80 / 160 / 320.
+- **Hats:** six cosmetics bought with coins (120 to 600), worn with any skin.
+- **Challenge a friend:** every run has a seed. The share button makes a link carrying the seed and score; the friend plays the identical gate sequence and sees the score to beat.
+- **App basics:** pause button, app icon, installable web app, offline play, bundled fonts.
 
 ---
 
