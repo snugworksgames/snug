@@ -773,7 +773,7 @@ function update(dt){
   const sp=state==="play"?speed(R.passed):18;
   for(const c of clouds){c.y+=sp*.22*c.z*dt;c.x+=6*c.z*dt;if(c.y>LH+80){c.y=-80;c.x=rand(-40,LW+40)}if(c.x>LW+90)c.x=-90}
   for(const s of stars){s.y+=sp*.08*dt;if(s.y>LH+5){s.y=-5;s.x=Math.random()*LW}}
-  shake=Math.max(0,shake-dt*(8+shake*4));            // big hits fall off fast, small ones fade softly squish=Math.max(0,squish-dt*2); flash=Math.max(0,flash-dt*2);
+  shake=Math.max(0,shake-dt*(8+shake*4)); squish=Math.max(0,squish-dt*2); flash=Math.max(0,flash-dt*2);   // shake: big hits fall off fast, small ones fade softly
 }
 function humSet(off){if(!AC||!humGain)return;const t=AC.currentTime;
   if(off||state!=="play"){humGain.gain.setTargetAtTime(0,t,.05);return}
@@ -1376,7 +1376,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="10";
+const BUILD="11";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{

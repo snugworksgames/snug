@@ -27,7 +27,7 @@ const server = createServer((req, res) => {
   if (!file.startsWith(join(root, "docs")) || !existsSync(file)) { res.writeHead(404); res.end(); return; }
   let data = readFileSync(file);
   if (path.endsWith("index.html")) {
-    data = data.toString().replace("function boot(){", "window.__g=()=>({R,blobR,state,BY,CH,S});function boot(){");
+    data = data.toString().replace("function boot(){", "window.__g=()=>({R,blobR,state,BY,CH,S,squish,flash});function boot(){");
   }
   res.writeHead(200, { "content-type": TYPES[extname(file)] || "application/octet-stream" });
   res.end(data);
@@ -151,6 +151,21 @@ await shot(page, "share-after-gate");
 const shared = await page.evaluate(() => (document.querySelector(".linkbox") || document.querySelector(".toast") || {}).textContent || "");
 check(/\?c=\d+-\d+-g\d+/.test(shared) || /copied/i.test(shared), `challenge button produces a link with the gate version (${shared.slice(-40)})`);
 if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link"); await page.click("[data-x]"); await page.waitForTimeout(200); }
+
+// 2b. Crash squash and squeeze flash wear off (a mid-line comment once froze them, flattening the blob for the session)
+{
+  const cr = await open(browser, base, rich);
+  await startByTap(cr);
+  const cb = await cr.locator("#cv").boundingBox();
+  await cr.mouse.move(cb.x + cb.width / 2, cb.y + cb.height * 0.45); await cr.mouse.down();   // hold: grow until a narrow gate squashes the blob
+  await cr.waitForFunction(() => window.__g().state !== "play", null, { timeout: 30000 }); await cr.mouse.up();
+  const hit = await cr.evaluate(() => ({ end: window.__g().R.end, squish: window.__g().squish }));
+  await cr.waitForTimeout(1500);
+  const fx = await cr.evaluate(() => ({ squish: window.__g().squish, flash: window.__g().flash }));
+  check(hit.end === "crash" && hit.squish > 0 && fx.squish === 0 && fx.flash === 0,
+    `crash squash and squeeze flash wear off (${hit.end}: squish ${hit.squish.toFixed(2)} -> ${fx.squish}, flash ${fx.flash})`);
+  await cr.context().close();
+}
 
 // 3. Pause
 await page.click("#bRetry"); await page.waitForTimeout(600);
