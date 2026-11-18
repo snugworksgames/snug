@@ -11,6 +11,14 @@
 > The web build shows no ads; real ads arrive with the store app (see [LAUNCH_PLAN.md](LAUNCH_PLAN.md)).
 > The Unity prototype in `unity/` covers only the original core rules and is not kept in sync.
 
+**Long-term goals (build 16)**: the shop used to run out around day 10 (4,040 coins of skins and hats against roughly 400 coins a day).
+- **Fire trails** (coin sink): 6 trails from 400 to 1,200 coins (4,700 total). They stream behind the blob from ×2 up, fully while on fire. Not part of Snug Plus, so coins keep their value.
+- **Skin mastery**: Perfects, Squeezes and Smashes made while wearing a skin unlock its Pastel (100), Deep (300) and Shiny (700) styles.
+- **Laurel hat**: earned only with a 7-day Daily Challenge streak (excluded from Plus, like the Rainbow skin).
+- **Weekly missions**: three bigger goals a week (150–250 coins), the same for everyone, picked from the week's Monday.
+
+**Store (build 15)**: Snug Plus (no ads between runs, every skin and hat in the shop, the Golden blob) and Remove Ads, one-time purchases through Google Play behind the parental gate. See LAUNCH_PLAN.md.
+
 **Interface pass (builds 12–13)**
 - Readable buttons: fills darkened until white text passes 3:1, thin ink outline on button and banner text.
 - Calmer HUD: smaller score that rolls up, no in-run coin counter, multiplier chip colored by level, power-ups shown as draining rings, challenge progress under the score.

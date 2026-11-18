@@ -138,6 +138,9 @@ check(/Available in the Android app/.test(await page.locator(".plus").textConten
 await page.click('[data-hat="crown"]'); await page.waitForTimeout(300);
 let st = await page.evaluate(() => window.__g().S);
 check(st.hat === "crown" && st.hats.includes("crown") && st.coins === 1400, "buying the crown costs 600 coins and equips it");
+await page.click('[data-trail="mint"]'); await page.waitForTimeout(300);
+st = await page.evaluate(() => window.__g().S);
+check(st.trail === "mint" && st.trails.includes("mint") && st.coins === 1000, "buying the Mint fire trail costs 400 coins and equips it");
 await page.locator(".scroll").evaluate((el) => (el.scrollTop = 200)); await shot(page, "collection-hats");
 await page.click("[data-x]"); await page.waitForTimeout(200);
 await page.click("#bSet"); await page.waitForTimeout(300); await shot(page, "settings");
@@ -175,7 +178,7 @@ if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link")
 
 // 2b. Crash squash and squeeze flash wear off (a mid-line comment once froze them, flattening the blob for the session)
 {
-  const cr = await open(browser, base, rich);
+  const cr = await open(browser, base, { ...rich, mastery: { peach: 99 } });
   await startByTap(cr);
   const cb = await cr.locator("#cv").boundingBox();
   await cr.mouse.move(cb.x + cb.width / 2, cb.y + cb.height * 0.45); await cr.mouse.down();   // hold: grow until a narrow gate squashes the blob
@@ -186,8 +189,15 @@ if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link")
   check(hit.end === "crash" && hit.squish > 0 && fx.squish === 0 && fx.flash === 0,
     `crash squash and squeeze flash wear off (${hit.end}: squish ${hit.squish.toFixed(2)} -> ${fx.squish}, flash ${fx.flash})`);
   if (await cr.locator("#rvNo").isVisible()) { await cr.click("#rvNo"); await cr.waitForTimeout(400); }
-  await cr.waitForFunction(() => window.__g().state === "over"); await cr.waitForTimeout(800);
-  await cr.click("#bHome", { force: true }); await cr.waitForTimeout(300); await cr.click("#bSet"); await cr.waitForTimeout(300);
+  await cr.waitForFunction(() => window.__g().state === "over"); await cr.waitForTimeout(1400);
+  const ms = await cr.evaluate(() => ({ m: window.__g().S.mastery.peach, rew: document.getElementById("oRew").textContent }));
+  check(ms.m >= 100 && /Peach Pastel unlocked/.test(ms.rew), `Perfects in a skin unlock its next style (Peach mastery ${ms.m}: "${ms.rew.trim()}")`);
+  await cr.click("#bHome", { force: true }); await cr.waitForTimeout(300);
+  await cr.click("#bMis"); await cr.waitForTimeout(400);
+  const mis = await cr.evaluate(() => ({ rows: document.querySelectorAll(".mis").length, week: /This week/.test(document.querySelector(".modal").textContent), runs: window.__g().S.weekly.find((m) => m.k === "wRuns") }));
+  check(mis.rows === 6 && mis.week, `missions show 3 daily and 3 weekly goals (${mis.rows} rows)`);
+  await cr.evaluate(() => document.querySelectorAll(".modal").forEach((m) => m.remove()));
+  await cr.click("#bSet"); await cr.waitForTimeout(300);
   for (let i = 0; i < 5; i++) { await cr.click(".note"); await cr.waitForTimeout(60); }
   await cr.waitForTimeout(300);
   const stats = (await cr.locator(".stattext").textContent().catch(() => "")) || "";
@@ -283,7 +293,8 @@ check(/different version/i.test(await old.locator(".modal").first().textContent(
 await old.context().close();
 
 // 5. Daily challenge: same gates for two players, one scored try, no revive, result saved and shareable
-const d1 = await open(browser, base, rich);
+const yesterday = (() => { const d = new Date(Date.now() - 864e5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+const d1 = await open(browser, base, { ...rich, dcStreak: 6, dcLast: yesterday });
 check(/DAILY CHALLENGE #\d+/.test(await d1.locator("#dcT").textContent()), "home shows the daily challenge button");
 await d1.click("#bDC"); await d1.waitForTimeout(300);
 await shot(d1, "daily-intro");
@@ -296,6 +307,7 @@ check(dSeed !== false && !dPeakA.sawRevive && !dRes.cont, "the daily run offers 
 check(/^DAILY #\d+$/.test(dRes.title) && dRes.dc && dRes.dc.score === dRes.score && dRes.dc.log.length >= dRes.dc.gates,
   `daily result is saved (score ${dRes.dc && dRes.dc.score}, ${dRes.dc && dRes.dc.gates} gates)`);
 await shot(d1, "daily-result");
+check(await d1.evaluate(() => window.__g().S.hats.includes("laurel") && window.__g().S.hat === "laurel"), "a 7-day Daily Challenge streak earns the Laurel hat");
 await d1.click("#bHome"); await d1.waitForTimeout(300);
 check(await d1.locator("#bDC.done").isVisible(), "after playing, the daily button shows today's score");
 await d1.click("#bDC"); await d1.waitForTimeout(300);

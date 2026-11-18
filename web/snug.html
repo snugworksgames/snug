@@ -287,6 +287,11 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 @keyframes fadeout{to{opacity:0}}
 @keyframes popout{to{transform:scale(.88);opacity:0}}
 .pausep .setrow{padding:8px 12px;font-size:18px}
+/* skin styles row */
+.styles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.styles .tile{font-size:13px;padding:6px 2px}
+.styles .tile canvas{width:48px;height:48px}
+.styles .tile .state .ic{font-size:12px}
 /* store card and tester stats */
 .plus{display:grid;grid-template-columns:64px 1fr;gap:8px 12px;align-items:center;text-align:left;background:linear-gradient(#fff7d6,#ffe7a1);
   border:3px solid var(--ink);border-radius:18px;padding:12px}
@@ -475,14 +480,42 @@ const STREAK_REWARDS=[10,15,20,25,30,40,50];
 const xpNeed=l=>80+l*40;
 const HATS=[
  {id:"none",name:"No hat",cost:0},{id:"cap",name:"Cap",cost:120},{id:"bow",name:"Bow",cost:160},{id:"shades",name:"Shades",cost:220},
- {id:"party",name:"Party",cost:280},{id:"phones",name:"Beats",cost:360},{id:"crown",name:"Crown",cost:600}
+ {id:"party",name:"Party",cost:280},{id:"phones",name:"Beats",cost:360},{id:"crown",name:"Crown",cost:600},
+ {id:"laurel",name:"Laurel",cost:-1,note:"7-day Daily"}
+];
+// ---------- long-term goals ----------
+// Fire trails: bought with coins, the long-term coin sink. They stream behind the blob from x2 up, fully while on fire.
+const TRAILS=[
+ {id:"ember",name:"Ember",cost:0,c:["#ffcf3a","#ff9a3a"]},
+ {id:"mint",name:"Mint",cost:400,c:["#7ef0c3","#2fae84"]},
+ {id:"bubble",name:"Bubblegum",cost:550,c:["#ff9ec7","#ff5d9e"]},
+ {id:"ocean",name:"Ocean",cost:700,c:["#8fdcff","#2386cc"]},
+ {id:"grape",name:"Grape",cost:850,c:["#cdb0ff","#7c55d6"]},
+ {id:"rainbow",name:"Rainbow",cost:1000,c:["#ff6f91","#ffcf3a","#5fd34a","#3fb4f0","#8a6bff"]},
+ {id:"star",name:"Starlight",cost:1200,c:["#fff6c8","#ffffff"],star:true}
+];
+// Skin mastery: Perfects (and Squeezes, Smashes) made while wearing a skin unlock styles for it.
+const MASTERY=[0,100,300,700], STYLES=["Classic","Pastel","Deep","Shiny"];
+const mixHex=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join("")};
+// Weekly missions: three bigger goals a week, the same for everyone (picked from the week's Monday), paid automatically.
+const WEEKLY_POOL=[
+ {k:"wRuns",t:30,rw:150,i:"play",txt:n=>`Play ${n} runs this week`},
+ {k:"wCoins",t:300,rw:150,i:"coin",txt:n=>`Collect ${n} coins this week`},
+ {k:"wSqueeze",t:25,rw:200,i:"blob",txt:n=>`Pull off ${n} Squeezes this week`},
+ {k:"wGates",t:500,rw:200,i:"gates",txt:n=>`Pass ${n} gates this week`},
+ {k:"wSmash",t:20,rw:150,i:"gates",txt:n=>`Smash ${n} glass gates this week`},
+ {k:"wGems",t:40,rw:150,i:"gem",txt:n=>`Grab ${n} gems this week`},
+ {k:"wDaily",t:4,rw:250,i:"cal",txt:n=>`Play the Daily Challenge on ${n} days`},
+ {k:"wCandy",t:3,rw:200,i:"star",txt:n=>`Reach the Candy zone ${n} times`},
+ {k:"wGold",t:1,rw:200,i:"trophy",txt:()=>`Earn a Gold medal (450 points)`}
 ];
 const MEDALS=[["BRONZE",80,"#e0965a"],["SILVER",220,"#d3dbe6"],["GOLD",450,"#ffcf3a"],["DIAMOND",900,"#7fe0ff"]];   // build 10 scoring: same rarity as before
 
 // ---------- save ----------
 const DEF={best:0,coins:0,xp:0,level:1,skins:["peach"],skin:"peach",hats:["none"],hat:"none",theme:"pond",streak:0,lastDay:null,
   mDay:null,missions:[],runs:0,sessions:0,sound:true,music:true,haptics:true,seen:{},zone:0,dc:null,dcStreak:0,dcLast:null,dcBest:0,
-  plus:false,noAds:false,offerDay:null,adsDay:null,adsToday:0};
+  plus:false,noAds:false,offerDay:null,adsDay:null,adsToday:0,
+  trails:["ember"],trail:"ember",mastery:{},style:{},weekly:[],wDay:null};
 const fresh=()=>JSON.parse(JSON.stringify(DEF)); // deep copy, so a reset never inherits earlier purchases
 let S=fresh();
 try{const raw=localStorage.getItem("snug.v1");if(raw)S=Object.assign(fresh(),JSON.parse(raw))}catch(e){}
@@ -590,7 +623,17 @@ const GRACE=0.017;  // s (one frame): a last-instant overshoot is forgiven if th
 const theme=()=>THEMES[R?R.zone:0]; // the sky follows the zone you've climbed to
 const skin=()=>SKINS.find(s=>s.id===S.skin)||SKINS[0];
 const ownsSkin=s=>S.skins.includes(s.id)||(S.plus&&s.id!=="aurora");   // Plus: every skin except the 7-day streak gift
-const ownsHat=h=>S.hats.includes(h.id)||S.plus;
+const ownsHat=h=>S.hats.includes(h.id)||(S.plus&&h.cost>=0);   // Plus: every shop hat (the Laurel is earned)
+const trail=()=>TRAILS.find(t=>t.id===S.trail)||TRAILS[0];
+const masterable=s=>s.id!=="aurora"&&s.id!=="golden";
+const stylesOf=s=>masterable(s)?MASTERY.filter(t=>(S.mastery[s.id]||0)>=t).length:1;   // styles unlocked for a skin
+function lookAt(s,v){   // a skin drawn in a style
+  if(!masterable(s)||!v)return s;
+  if(v===1)return {...s,c:mixHex(s.c,"#ffffff",.38),d:mixHex(s.d,"#ffffff",.3)};
+  if(v===2)return {...s,c:mixHex(s.c,"#2b2040",.2),d:mixHex(s.d,"#2b2040",.28)};
+  return {...s,shiny:true};
+}
+const look=(s=skin())=>lookAt(s,Math.min(S.style[s.id]||0,stylesOf(s)-1));   // the skin as worn, in its chosen style
 
 // ---------- state ----------
 let state="home", T=0, holding=false, paused=false;
@@ -784,7 +827,7 @@ function shatter(g){
 }
 function crash(g){
   state="dying"; holding=false; shake=14; squish=1; hitStop=.09; SFX.crash(); buzz([30,40,60]);
-  for(let i=0;i<30;i++)parts.push({x:LW/2+rand(-blobR,blobR),y:BY+rand(-8,8),vx:rand(-260,260),vy:rand(-340,40),life:rand(.5,1),max:1,c:skin().c,s:rand(4,9),g:700});
+  for(let i=0;i<30;i++)parts.push({x:LW/2+rand(-blobR,blobR),y:BY+rand(-8,8),vx:rand(-260,260),vy:rand(-340,40),life:rand(.5,1),max:1,c:look().c,s:rand(4,9),g:700});
   R.end="crash"; R.log.push("X"); after(.9,endRun);
 }
 function fadeOut(){state="dying";holding=false;R.end="fade";R.log.push("F");SFX.loose();after(.9,endRun)}
@@ -795,7 +838,7 @@ function endRun(){
 }
 
 // ---------- particles ----------
-function burst(g,n,big){const c=g.gold?C_GOLD:skin().c;
+function burst(g,n,big){const c=g.gold?C_GOLD:look().c;
   for(let i=0;i<n;i++){const a=rand(0,Math.PI*2),sp=rand(90,big?360:240);
     parts.push({x:LW/2+Math.cos(a)*blobR,y:BY+Math.sin(a)*blobR,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-40,life:rand(.4,.8),max:.8,
       c:Math.random()<.45?"#ffffff":c,s:rand(3,big?8:6),g:260,star:Math.random()<.5,rot:rand(0,6),vr:rand(-8,8)})}
@@ -820,8 +863,9 @@ function update(dt){
   wob+=dt*(holding?14:5); pulse=Math.max(0,pulse-dt*3); worldV=0;
   if(state==="play"){
     R.t+=dt;
-    if(R.chain>=6){fireT-=dt;if(fireT<=0){fireT=.05;   // on-fire trail
-      parts.push({x:LW/2+rand(-blobR*.7,blobR*.7),y:BY+blobR*.5,vx:rand(-20,20),vy:rand(120,220),life:.5,max:.5,c:Math.random()<.5?"#ffcf3a":"#ff9a3a",s:rand(3,6),g:0})}}
+    if(R.chain>=3){fireT-=dt;if(fireT<=0){const tr=trail(),hot=R.chain>=6;fireT=hot?.05:.11;   // trail: from x2 up, full while on fire
+      parts.push({x:LW/2+rand(-blobR*.7,blobR*.7),y:BY+blobR*.5,vx:rand(-20,20),vy:rand(120,220),life:hot?.5:.38,max:hot?.5:.38,
+        c:tr.c[Math.floor(Math.random()*tr.c.length)],s:rand(3,hot?6:4.5),g:0,star:!!tr.star,rot:0,vr:tr.star?6:0})}}
     if(holding!==lastHold){lastHold=holding;sinceToggle=0;pressT=T;pressDir=holding?1:-1} sinceToggle+=dt;
     let rate=rateNow(holding);
     // beginner assist: the blob gets 'sticky' near the perfect size for the first gates of the first runs
@@ -1024,6 +1068,8 @@ function paintBlob(c,r,s,o={}){
   if(dim<1){c.fillStyle=`rgba(90,84,110,${(1-dim)*.6})`;c.fillRect(-r,-r,2*r,2*r)}
   c.restore();
   const lw=clamp(r*.085,2.2,4.2);c.lineWidth=lw;c.strokeStyle=INK;c.beginPath();c.arc(0,0,r,0,7);c.stroke();
+  if(s.shiny){const tw=(Math.sin(t*4)+1)/2;c.fillStyle=`rgba(255,255,255,${.6+.4*tw})`;   // Shiny style: twinkling sparkles
+    for(const [x,y,k] of [[-.52,-.18,.17],[.5,-.44,.13],[.32,.52,.11]]){c.save();c.translate(x*r,y*r);c.rotate(t*1.5);starPath(c,k*r*(.75+.25*tw));c.fill();c.restore()}}
   // face
   const ex=r*.3, ey=-r*.06, er=Math.max(1.8,r*.12);
   c.fillStyle=INK;c.strokeStyle=INK;c.lineCap="round";c.lineJoin="round";c.lineWidth=Math.max(1.8,r*.07);
@@ -1054,6 +1100,11 @@ function paintHat(c,r,h){
     poly([[-.56,-.78],[-.62,-1.3],[-.3,-1.05],[0,-1.42],[.3,-1.05],[.62,-1.3],[.56,-.78]]);c.fillStyle="#ffcf3a";c.fill();c.stroke();
     c.fillStyle="#ff6f91";c.beginPath();c.arc(0,-.98*r,.09*r,0,7);c.fill();
     c.fillStyle="#5cd6ff";c.beginPath();c.arc(-.34*r,-.92*r,.06*r,0,7);c.arc(.34*r,-.92*r,.06*r,0,7);c.fill();
+  } else if(h==="laurel"){   // the 7-day Daily Challenge reward
+    for(const sd of[-1,1])for(let i=0;i<5;i++){const a=-Math.PI/2+sd*(.3+i*.27);
+      c.save();c.translate(Math.cos(a)*r,Math.sin(a)*r);c.rotate(a+Math.PI/2);c.beginPath();c.ellipse(0,0,.17*r,.075*r,0,0,7);
+      c.fillStyle=i%2?"#5fd34a":"#3aa078";c.fill();c.stroke();c.restore()}
+    c.fillStyle="#ffcf3a";c.beginPath();c.arc(0,-1.02*r,.085*r,0,7);c.fill();c.stroke();
   } else if(h==="cap"){
     c.beginPath();c.ellipse(0,-.72*r,.66*r,.5*r,0,Math.PI,0);c.closePath();c.fillStyle="#ff5d5d";c.fill();c.stroke();      // dome
     c.beginPath();c.ellipse(.62*r,-.7*r,.42*r,.1*r,.08,0,7);c.fillStyle="#c93d3d";c.fill();c.stroke();                 // brim
@@ -1091,7 +1142,7 @@ function drawBlob(){
   if(R&&state==="play"&&R.chain>=6){  // on-fire aura
     const fr=blobR+14+Math.sin(T*10)*3,g=ctx.createRadialGradient(0,0,blobR*.8,0,0,fr+8);
     g.addColorStop(0,"rgba(255,207,58,.75)");g.addColorStop(1,"rgba(255,140,40,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,fr+8,0,7);ctx.fill()}
-  paintBlob(ctx,blobR,skin(),{sx,sy,dim:[0,.45,.75,1][clamp(glow,0,3)],face,t:T,hat:S.hat});
+  paintBlob(ctx,blobR,look(),{sx,sy,dim:[0,.45,.75,1][clamp(glow,0,3)],face,t:T,hat:S.hat});
   ctx.restore();
 }
 
@@ -1117,7 +1168,9 @@ function gameOver(){
   if(ST.firstRun==null)ST.firstRun=R.passed; track("run_end");
   const isBest=R.score>S.best, prevBest=S.best; if(isBest)S.best=R.score;
   S.coins+=R.coins;
-  const done=trackMissions(R);
+  const done=trackMissions(R), wdone=trackWeekly(R);
+  const ws=skin(), stylesBefore=stylesOf(ws); if(masterable(ws))S.mastery[ws.id]=(S.mastery[ws.id]||0)+R.perfects;   // skin mastery
+  const newStyle=stylesOf(ws)>stylesBefore?`${ws.name} ${STYLES[stylesOf(ws)-1]}`:null;
   const xpGain=R.score+R.passed; S.xp+=xpGain; let leveled=[];
   while(S.xp>=xpNeed(S.level)){S.xp-=xpNeed(S.level);S.level++;S.coins+=20;leveled.push(S.level)}
   save();
@@ -1149,9 +1202,10 @@ function gameOver(){
   if(IAP&&ADS&&!S.noAds&&S.sessions>1&&S.adsDay===todayKey()&&S.adsToday>=3&&S.offerDay!==todayKey())
     setTimeout(()=>{if(state==="over")plusOffer("ads")},1400);
   // mission and level rewards land inside the panel, in sequence, instead of pop-ups over the banner
-  const mc=done.reduce((a,m)=>a+m.rw,0);
-  const rew=[...(done.length?[["coin",done.length>1?`Missions ×${done.length} +${mc}`:`Mission +${mc}`]]:[]),
-    ...(leveled.length?[["star",leveled.length>1?`Level ${leveled[leveled.length-1]} +${20*leveled.length}`:`Level ${leveled[0]} +20`]]:[])];   // at most two chips: one line
+  const all=[...done,...wdone], mc=all.reduce((a,m)=>a+m.rw,0);
+  const rew=[...(all.length?[["coin",all.length>1?`Missions ×${all.length} +${mc}`:`${wdone.length?"Weekly":"Mission"} +${mc}`]]:[]),
+    ...(leveled.length?[["star",leveled.length>1?`Level ${leveled[leveled.length-1]} +${20*leveled.length}`:`Level ${leveled[0]} +20`]]:[]),
+    ...(dcInfo&&dcInfo.laurel?[["cal","Laurel hat unlocked"]]:newStyle?[["star",`${newStyle} unlocked`]]:[])];   // at most three chips
   $("oRew").innerHTML=rew.map(([i,t],k)=>`<span class="rew" style="--rd:${650+k*220}ms">${ic(i)}${t}</span>`).join("");
   rew.forEach((_,k)=>setTimeout(()=>SFX.reward(),650+k*220));
 }
@@ -1177,8 +1231,10 @@ function dcRecord(r){
     S.dc={day,num,score:r.score,gates:r.passed,perfects:r.perfects,log:r.log.join("")};
     S.dcBest=Math.max(S.dcBest||0,r.score); save(); track("daily_done");
   }
+  let laurel=false;
+  if(S.dcStreak>=7&&!S.hats.includes("laurel")){S.hats.push("laurel");S.hat="laurel";laurel=true;save()}   // 7-day Daily streak reward
   renderDC();
-  return {num,streak:S.dcStreak};
+  return {num,streak:S.dcStreak,laurel};
 }
 function dcShareText(){
   const d=S.dc;
@@ -1206,6 +1262,7 @@ function dcPanel(){
       <div class="dcgrid">${dcGrid([...d.log])}</div>
       <div class="stats"><div class="stat">${ic("gates")}<b>${d.gates}</b><span>Gates</span></div><div class="stat">${ic("star")}<b>${S.dcStreak||1}</b><span>Streak</span></div><div class="stat">${ic("trophy")}<b>${S.dcBest||d.score}</b><span>Best daily</span></div></div>
       <div class="msg">New gates in ${untilMidnight()}</div>
+      ${S.hats.includes("laurel")?"":`<div class="note" style="text-align:center">${Math.min(S.dcStreak||0,7)}/7 days in a row for the Laurel hat</div>`}
       ${canShare?`<button class="btn purple wide" data-share>${ic("share")}SHARE RESULT</button>`:""}`);
     const b=m.querySelector("[data-share]");if(b)b.onclick=e=>{e.stopPropagation();SFX.ui();parentGate(shareDaily)};
     return m;
@@ -1257,7 +1314,7 @@ let lastMult=1;
 function updateHud(bump){
   if(!R)return; const s=$("score"); rollScore(R.score);
   if(bump){s.classList.remove("pop");void s.offsetWidth;s.classList.add("pop")}
-  const sc=skin().c;
+  const sc=look().c;
   [...$("pips").children].forEach((p,i)=>{p.classList.toggle("off",i>=R.glow);p.style.color=sc});
   $("hCoinRun").textContent=R.coins;
   const ch=$("chal");ch.hidden=!CH;if(CH){ch.classList.toggle("won",R.chWon);ch.innerHTML=`${ic(R.chWon?"check":"trophy")}${CH.target}`}
@@ -1352,12 +1409,32 @@ function trackMissions(r){
   return done;
 }
 function untilMidnight(){const now=new Date(),mid=new Date(now);mid.setHours(24,0,0,0);return `${Math.floor((mid-now)/36e5)}h ${Math.floor((mid-now)/6e4)%60}m`}
+const weekKey=(d=new Date())=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return todayKey(x)};   // this week's Monday
+const untilMonday=()=>{const now=new Date(),n=new Date(now);n.setDate(n.getDate()+((8-n.getDay())%7||7));n.setHours(0,0,0,0);
+  const h=Math.floor((n-now)/36e5);return h>=24?`${Math.floor(h/24)}d ${h%24}h`:`${h}h`};
+function ensureWeekly(){
+  const key=weekKey(); if(S.wDay===key&&S.weekly.length===3)return;
+  const rnd=seeded("w"+key),pool=[...WEEKLY_POOL],out=[];
+  while(out.length<3){const m=pool.splice(Math.floor(rnd()*pool.length),1)[0];out.push({k:m.k,t:m.t,rw:m.rw,p:0,done:false})}
+  S.wDay=key;S.weekly=out;save();
+}
+function trackWeekly(r){
+  ensureWeekly(); const done=[];
+  const inc={wRuns:1,wCoins:r.coins,wSqueeze:r.squeezes,wGates:r.passed,wSmash:r.smash,wGems:r.gemsGot,wDaily:r.daily?1:0,
+    wCandy:r.passed>=ZONE_AT[2]?1:0,wGold:r.score>=MEDALS[2][1]?1:0};
+  for(const m of S.weekly){if(m.done)continue;m.p=Math.min(m.t,m.p+(inc[m.k]||0));if(m.p>=m.t){m.done=true;S.coins+=m.rw;done.push(m)}}
+  return done;
+}
+function misRow(m,def){const pct=Math.round(m.p/m.t*100);
+  return `<div class="mis ${m.done?"done":""}"><span class="mi">${ic(m.done?"check":def.i)}</span><span class="t">${def.txt(m.t)}</span>
+    <span class="rw">${m.done?`<svg class="ic done-check"><use href="#i-check"/></svg>`:`${ic("coin")}${m.rw}`}</span>
+    <span class="pb"><i style="width:${pct}%"></i><span>${m.p}/${m.t}</span></span></div>`}
 function missionsPanel(){
-  const rows=S.missions.map(m=>{const def=MISSION_POOL.find(d=>d.k===m.k);const pct=Math.round(m.p/m.t*100);
-    return `<div class="mis ${m.done?"done":""}"><span class="mi">${ic(m.done?"check":def.i)}</span><span class="t">${def.txt(m.t)}</span>
-      <span class="rw">${m.done?`<svg class="ic done-check"><use href="#i-check"/></svg>`:`${ic("coin")}${m.rw}`}</span>
-      <span class="pb"><i style="width:${pct}%"></i><span>${m.p}/${m.t}</span></span></div>`}).join("");
-  panel("MISSIONS","var(--green)",`<div class="timer">New missions in ${untilMidnight()}</div><div style="display:grid;gap:10px">${rows}</div>
+  ensureWeekly();
+  const rows=S.missions.map(m=>misRow(m,MISSION_POOL.find(d=>d.k===m.k))).join("");
+  const wrows=S.weekly.map(m=>misRow(m,WEEKLY_POOL.find(d=>d.k===m.k))).join("");
+  panel("MISSIONS","var(--green)",`<div class="scroll"><div class="timer">Today · new missions in ${untilMidnight()}</div><div style="display:grid;gap:10px">${rows}</div>
+    <div class="sect"><span>This week</span><span class="timer">${untilMonday()} left</span></div><div style="display:grid;gap:10px">${wrows}</div></div>
     <button class="btn wide" data-go>${ic("play")}PLAY</button>`).querySelector("[data-go]").onclick=e=>{e.target.closest(".modal").remove();SFX.ui()};
 }
 
@@ -1390,7 +1467,7 @@ function dailyPanel(){
 // ---------- home & panels ----------
 function renderHome(){
   ensureMissions(); renderDC();
-  const lg=document.querySelector(".logo");lg.style.setProperty("--lb",skin().c);lg.style.setProperty("--ld",skin().d);   // the logo's blob wears your skin
+  const lg=document.querySelector(".logo"),lk=look();lg.style.setProperty("--lb",lk.c);lg.style.setProperty("--ld",lk.d);   // the logo's blob wears your skin
   $("hCoins").textContent=S.coins;$("hLvl").textContent=S.level;$("hStreak").textContent=Math.max(1,S.streak);$("hBest").textContent=S.best;
   $("hXp").style.width=Math.round(S.xp/xpNeed(S.level)*100)+"%";
   const open=S.missions.filter(m=>!m.done).length;$("mBadge").textContent=open;$("mBadge").hidden=open===0;
@@ -1410,10 +1487,15 @@ function skinsPanel(scrollTo=0){
    <div class="grid">${SKINS.map(s=>{const own=ownsSkin(s),sel=S.skin===s.id;
      return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-skin="${s.id}"><canvas></canvas>${s.name}
        ${own?`<span class="state">${sel?"Equipped":"Equip"}</span>`:s.cost<0?`<span class="state">${s.note}</span>`:`<span class="price">${ic("coin")}${s.cost}</span>`}</button>`}).join("")}</div>
+   ${styleRow()}
    <div class="sect"><span>Hats</span></div>
    <div class="grid">${HATS.map(h=>{const own=ownsHat(h),sel=S.hat===h.id;
      return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-hat="${h.id}"><canvas></canvas>${h.name}
-       ${own?`<span class="state">${sel?"Wearing":"Wear"}</span>`:`<span class="price">${ic("coin")}${h.cost}</span>`}</button>`}).join("")}</div>
+       ${own?`<span class="state">${sel?"Wearing":"Wear"}</span>`:h.cost<0?`<span class="state">${h.note}</span>`:`<span class="price">${ic("coin")}${h.cost}</span>`}</button>`}).join("")}</div>
+   <div class="sect"><span>Fire trails</span></div>
+   <div class="grid">${TRAILS.map(t=>{const own=S.trails.includes(t.id),sel=S.trail===t.id;
+     return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-trail="${t.id}"><canvas></canvas>${t.name}
+       ${own?`<span class="state">${sel?"Equipped":"Equip"}</span>`:`<span class="price">${ic("coin")}${t.cost}</span>`}</button>`}).join("")}</div>
    <div class="sect"><span>Zones discovered</span><span class="pill">${(S.zone||0)+1}/${THEMES.length}</span></div>
    <div class="grid">${THEMES.map((t,i)=>{const own=(S.zone||0)>=i;
      return `<div class="tile ${own?"":"locked"}" data-theme="${t.id}"><canvas></canvas>${own?t.name:"???"}
@@ -1421,9 +1503,11 @@ function skinsPanel(scrollTo=0){
    <div class="sect"><span>Snug Plus</span></div>
    ${storeCard()}</div>`);
   track("collection_view"); wireStore(m,"collection");
-  m.querySelectorAll("[data-skin] canvas").forEach(c=>previewBlob(c,SKINS.find(s=>s.id===c.parentElement.dataset.skin)));
+  m.querySelectorAll("[data-skin] canvas").forEach(c=>previewBlob(c,look(SKINS.find(s=>s.id===c.parentElement.dataset.skin))));
+  m.querySelectorAll("[data-style] canvas").forEach(c=>previewBlob(c,lookAt(skin(),+c.parentElement.dataset.style)));
+  m.querySelectorAll("[data-trail] canvas").forEach(c=>previewTrail(c,TRAILS.find(t=>t.id===c.parentElement.dataset.trail)));
   m.querySelectorAll("[data-theme] canvas").forEach((c,i)=>previewWorld(c,THEMES[i],(S.zone||0)<i));
-  m.querySelectorAll("[data-hat] canvas").forEach(c=>previewBlob(c,skin(),c.parentElement.dataset.hat));
+  m.querySelectorAll("[data-hat] canvas").forEach(c=>previewBlob(c,look(),c.parentElement.dataset.hat));
   const sc=m.querySelector(".scroll");sc.scrollTop=scrollTo;
   const reopen=()=>{save();renderHome();const at=sc.scrollTop;m.remove();const n=skinsPanel(at);n.querySelector(".panel").style.animation="none";n.style.animation="none"};
   m.querySelectorAll("[data-skin]").forEach(b=>b.onclick=()=>{const s=SKINS.find(x=>x.id===b.dataset.skin);
@@ -1432,19 +1516,41 @@ function skinsPanel(scrollTo=0){
     else{SFX.loose();toast(s.cost<0?"Reach a 7-day streak":`Need ${s.cost-S.coins} more coins`);lockedOffer();return}
     reopen()});
   m.querySelectorAll("[data-hat]").forEach(b=>b.onclick=()=>{const h=HATS.find(x=>x.id===b.dataset.hat);
-    if(ownsHat(h)){S.hat=h.id;SFX.ui()}else if(S.coins>=h.cost){S.coins-=h.cost;S.hats.push(h.id);S.hat=h.id;SFX.reward();toast(`${h.name} unlocked!`,"blob")}
+    if(ownsHat(h)){S.hat=h.id;SFX.ui()}else if(h.cost>0&&S.coins>=h.cost){S.coins-=h.cost;S.hats.push(h.id);S.hat=h.id;SFX.reward();toast(`${h.name} unlocked!`,"blob")}
+    else if(h.cost<0){SFX.ui();toast("Play the Daily Challenge 7 days in a row","cal");return}
     else{SFX.loose();toast(`Need ${h.cost-S.coins} more coins`);lockedOffer();return}
+    reopen()});
+  m.querySelectorAll("[data-style]").forEach(b=>b.onclick=()=>{const s=skin(),v=+b.dataset.style;
+    if(v<stylesOf(s)){S.style[s.id]=v;SFX.ui();reopen()} else {SFX.loose();toast(`${MASTERY[v]-(S.mastery[s.id]||0)} more Perfects in ${s.name}`,"star")}});
+  m.querySelectorAll("[data-trail]").forEach(b=>b.onclick=()=>{const t=TRAILS.find(x=>x.id===b.dataset.trail);
+    if(S.trails.includes(t.id)){S.trail=t.id;SFX.ui()}else if(S.coins>=t.cost){S.coins-=t.cost;S.trails.push(t.id);S.trail=t.id;SFX.reward();toast(`${t.name} trail unlocked!`,"star")}
+    else{SFX.loose();toast(`Need ${t.cost-S.coins} more coins`);return}
     reopen()});
   return m;
 
 }
+// Styles of the skin you wear: unlocked by Perfects made while wearing it.
+function styleRow(){
+  const s=skin(); if(!masterable(s))return "";
+  const n=S.mastery[s.id]||0, un=stylesOf(s), next=MASTERY[un];
+  return `<div class="sect"><span>${s.name} styles</span><span class="pill">${ic("star")}${n}</span></div>
+    <div class="styles">${STYLES.map((name,i)=>{const own=i<un,sel=Math.min(S.style[s.id]||0,un-1)===i;
+      return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-style="${i}"><canvas></canvas>${name}
+        <span class="state">${own?(sel?"Wearing":"Wear"):`${ic("lock")}${MASTERY[i]}`}</span></button>`}).join("")}</div>
+    <div class="note">${next?`${next-n} more Perfects in ${s.name} unlock ${STYLES[un]}.`:`${s.name} fully mastered!`}</div>`;
+}
+function previewTrail(cv,t){const d=Math.min(window.devicePixelRatio||1,2);cv.width=64*d;cv.height=64*d;const c=cv.getContext("2d");c.scale(d,d);
+  const rnd=seeded(t.id);c.lineWidth=1.4;c.strokeStyle=INK;
+  for(let i=0;i<9;i++){const x=32+(rnd()-.5)*22,y=36+i*2.8+rnd()*5,z=2+rnd()*2.6;c.fillStyle=t.c[i%t.c.length];
+    if(t.star){c.save();c.translate(x,y);starPath(c,z*1.4);c.fill();c.stroke();c.restore()}else{c.beginPath();c.arc(x,y,z,0,7);c.fill();c.stroke()}}
+  c.translate(32,24);paintBlob(c,15,look(),{t:1})}
 // ---------- store: Snug Plus and Remove Ads, one-time purchases through Google Play ----------
 // Fair by design: cosmetics and comfort only, never score or gameplay. Every purchase sits behind the parental gate,
 // offers never interrupt a run, and Google Play is the source of truth (a refund takes the perks away again).
 function storeCard(){
   if(S.plus)return `<div class="plus owned">${ic("check")}<div><b>Snug Plus</b><span>Thank you! No ads between runs, every skin and hat, and Golden.</span></div></div>`;
   return `<div class="plus"><canvas class="plusblob"></canvas><div><b>Snug Plus</b>
-      <ul><li>No ads between runs</li><li>Every skin and hat</li><li>The Golden blob</li></ul></div>
+      <ul><li>No ads between runs</li><li>Every skin and hat in the shop</li><li>The Golden blob</li></ul></div>
     ${IAP?`<button class="btn wide" data-buy="plus">${ic("star")}GET PLUS <span class="price" data-price="${PRODUCTS.plus}"></span></button>
       ${S.noAds?"":`<button class="textbtn" data-buy="noads">Remove ads only <span data-price="${PRODUCTS.noads}"></span></button>`}
       <button class="textbtn small" data-restore>Restore purchases</button>`
@@ -1575,7 +1681,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="15";
+const BUILD="16";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
