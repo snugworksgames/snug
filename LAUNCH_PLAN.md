@@ -69,3 +69,24 @@ Getting a few hundred daily players, not the technology. The cheapest levers, in
 | Fixes from the test, store listing | Both | During the 14 days |
 | Production release on Google Play | You | After approval |
 | App Store | Later | Only if Android numbers justify $99 a year |
+
+## Costs: what can and can't charge you
+
+Budget: the one-time $25 Google Play fee and nothing else.
+
+**Snug itself can't run up a bill.** It has no server, no database and no API keys, and it calls no paid service. The game
+runs entirely on the player's phone; the website is free GitHub Pages; ads *pay you* (AdMob never charges). Every build runs
+`tools/check-secrets.mjs`, which fails if anything that looks like an API key, token or signing key is committed.
+
+**Account switches to keep it at $0:**
+- **GitHub (snugworksgames organization):** Settings → Billing and plans. Keep no payment method on file and every spending
+  limit at $0 (the default without a card). Then Actions, Packages and Codespaces simply stop at the free allowance instead of
+  charging. Builds of this public repository use free minutes anyway.
+- **Google Play Console:** the $25 registration is the only charge. There are no per-download or hosting fees.
+- **AdMob:** only ever pays out. The payment details it asks for are where *you* receive money, not a card it charges.
+- **Google Cloud:** don't create a Cloud billing account; nothing in Snug needs one. (Cloud "budgets" only send alerts, they
+  don't stop spending, so the safe cap is having no billing account at all.)
+- **Never add a paid API** (AI, maps, analytics with paid tiers) to the game. A key inside an app or web page can be copied by
+  anyone, which is exactly how the large surprise bills happen.
+- **Apple:** skipped for now ($99 a year).
+

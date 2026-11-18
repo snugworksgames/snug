@@ -19,3 +19,14 @@
 # Android app build
 node_modules/
 app/www/
+
+# Secrets and signing keys: never commit these. The Play upload key lives only in GitHub's encrypted secrets.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+.env
+.env.*
+google-services.json
+*service-account*.json

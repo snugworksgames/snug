@@ -16,6 +16,11 @@ on:
 permissions:
   contents: read
 
+# a newer push cancels an older build of the same branch, so builds never pile up
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,6 +44,9 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: gradle
+
+      - name: Check no secrets are committed
+        run: node tools/check-secrets.mjs
 
       - name: Build the web game and the app's web files
         run: |

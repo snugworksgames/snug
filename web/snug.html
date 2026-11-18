@@ -28,6 +28,14 @@ html{box-sizing:border-box;height:100%}
 body{height:100%;margin:0;background:var(--sky);color:var(--ink);font-family:var(--body);font-weight:800;
   overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #stage{position:relative;height:100%;max-width:520px;margin:0 auto;overflow:hidden;touch-action:none;background:var(--sky)}
+/* Wide screens (desktop, tablets): the game stays a portrait card. Around it, a soft backdrop that follows the current
+   zone's sky (--bgTop/--bgBot are set from the theme), so the sides look intended instead of flat blue. */
+body{background:var(--bgTop,#4fbdf0);
+  background:radial-gradient(rgba(255,255,255,.09) 1.5px,transparent 1.7px) 0 0/22px 22px,
+    linear-gradient(color-mix(in oklab,var(--bgTop,#4fbdf0) 68%,#1c1633),color-mix(in oklab,var(--bgBot,#c9f1ff) 58%,#1c1633))}
+@media (min-width:560px){
+  #stage{height:calc(100% - 32px);margin:16px auto;border-radius:24px;box-shadow:0 0 0 4px var(--ink),0 26px 70px rgba(20,16,40,.38)}
+}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 svg.ic{width:1em;height:1em;flex:none;display:block}
 .outline{color:#fff;text-shadow:var(--o3),0 6px 0 var(--ink)}
@@ -852,8 +860,10 @@ function hills(th,offset){
 }
 function sky(t,a){if(a<=0)return;ctx.globalAlpha=a;const bg=ctx.createLinearGradient(0,0,0,LH);bg.addColorStop(0,t.top);bg.addColorStop(1,t.bot);
   ctx.fillStyle=bg;ctx.fillRect(-20,-20,LW+40,LH+40);ctx.globalAlpha=1}
+let bgTheme="";
 function draw(){
   const th=theme();
+  if(th.id!==bgTheme){bgTheme=th.id;const b=document.body.style;b.setProperty("--bgTop",th.top);b.setProperty("--bgBot",th.bot)}   // wide-screen backdrop follows the sky
   ctx.setTransform(DPR*SC,0,0,DPR*SC,0,0);
   if(shake>0){const k=(shake/14)**2*9,f=T*40;ctx.translate(k*.5*Math.sin(f*1.31),k*Math.sin(f+1.7))}   // trauma²: smashes nudge, crashes slam
   const zk=R?clamp((T-zoneT)/1.6,0,1):1;
@@ -1454,7 +1464,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="13";
+const BUILD="14";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{

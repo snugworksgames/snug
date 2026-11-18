@@ -7,6 +7,7 @@
 // challenge link round trip (a second player gets the identical gate sequence), and the daily challenge
 // (same gates for everyone, one try, no revive, result saved and shareable).
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join, extname } from "node:path";
@@ -52,6 +53,9 @@ const failures0 = [];
 const failures = [];
 const check = (ok, what) => { console.log(`${ok ? "PASS" : "FAIL"}  ${what}`); if (!ok) failures.push(what); };
 check(failures0.length === 0, failures0[0] || "no code hidden after a // comment");
+{ let ok = true, out = "";
+  try { out = execFileSync("node", [join(root, "tools", "check-secrets.mjs")], { cwd: root, encoding: "utf8" }).trim(); } catch (e) { ok = false; out = String(e.stderr || e.message).trim(); }
+  check(ok, `no API keys or signing keys committed (${out.split("\n")[0]})`); }
 const shot = async (page, name) => { if (shots) await page.screenshot({ path: join(shots, name + ".png") }); };
 
 async function open(browser, url, save) {
