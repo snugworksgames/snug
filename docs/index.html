@@ -126,6 +126,7 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .lives{display:flex;gap:4px;padding-top:12px}
 .pip{width:28px;height:28px;transition:transform .2s,opacity .2s;filter:drop-shadow(0 2px 0 var(--ink))}
 .pip.off{opacity:.35;transform:scale(.8);filter:grayscale(1)}
+.pip.pop{animation:pippop .35s ease-out}@keyframes pippop{40%{transform:scale(1.4)}}
 .mult{justify-self:end;margin-top:12px;font-family:var(--display);font-size:24px;color:#fff;background:var(--pink);border:3px solid var(--ink);border-radius:14px;
   padding:2px 10px 4px;box-shadow:0 3px 0 var(--ink);text-shadow:var(--o2);transform:rotate(6deg);transition:transform .15s}
 .mult:empty{display:none}
@@ -408,7 +409,7 @@ const MISSION_POOL=[
  {k:"perfRun",t:6,rw:25,i:"star",txt:n=>`Get ${n} Perfects in one run`},
  {k:"chain",t:4,rw:30,i:"star",txt:n=>`Chain ${n} Perfects in a row`},
  {k:"gatesRun",t:25,rw:30,i:"gates",txt:n=>`Pass ${n} gates in one run`},
- {k:"scoreRun",t:40,rw:35,i:"trophy",txt:n=>`Score ${n} in one run`},
+ {k:"scoreRun",t:120,rw:35,i:"trophy",txt:n=>`Score ${n} in one run`},
  {k:"runs",t:5,rw:20,i:"play",txt:n=>`Play ${n} runs`},
  {k:"coins",t:15,rw:25,i:"coin",txt:n=>`Collect ${n} coins`},
  {k:"squeeze",t:2,rw:30,i:"blob",txt:n=>`Pull off ${n} Squeezes`},
@@ -418,7 +419,7 @@ const MISSION_POOL=[
  {k:"box",t:2,rw:30,i:"gift",txt:n=>`Open ${n} mystery boxes`}
 ];
 // Zones: the sky changes as you climb. Reaching one saves it to your collection.
-const ZONE_AT=[0,25,50,80];
+const ZONE_AT=[0,15,35,60];
 const zoneOf=p=>ZONE_AT.filter(z=>p>=z).length-1;
 const INTROS={gem:["GEMS!","Grow big between gates to grab them"],glass:["GLASS GATE!","Be BIGGER than the gap to smash it"],
   box:["MYSTERY BOX!","Fit it PERFECTLY to open the box"],twin:["TWIN GATES!","Two gates close together. Resize fast!"]};
@@ -429,7 +430,7 @@ const HATS=[
  {id:"none",name:"No hat",cost:0},{id:"cap",name:"Cap",cost:120},{id:"bow",name:"Bow",cost:160},{id:"shades",name:"Shades",cost:220},
  {id:"party",name:"Party",cost:280},{id:"phones",name:"Beats",cost:360},{id:"crown",name:"Crown",cost:600}
 ];
-const MEDALS=[["BRONZE",30,"#e0965a"],["SILVER",80,"#d3dbe6"],["GOLD",160,"#ffcf3a"],["DIAMOND",320,"#7fe0ff"]];
+const MEDALS=[["BRONZE",80,"#e0965a"],["SILVER",220,"#d3dbe6"],["GOLD",450,"#ffcf3a"],["DIAMOND",900,"#7fe0ff"]];   // build 10 scoring: same rarity as before
 
 // ---------- save ----------
 const DEF={best:0,coins:0,xp:0,level:1,skins:["peach"],skin:"peach",hats:["none"],hat:"none",theme:"pond",streak:0,lastDay:null,
@@ -532,6 +533,7 @@ window.addEventListener("resize",resize);
 const GROW=140, SHRINK=160, MINF=.3, RAMP=.3, RMIN=12, RMAX=98, BAR_H=24, HOME_R=34; // speed ramps up after each press/release: taps nudge, holds sweep
 let lastHold=false, sinceToggle=0;
 const rateNow=h=>(h?GROW:SHRINK)*(MINF+(1-MINF)*Math.min(1,sinceToggle/RAMP));
+const GRACE=0.017;  // s (one frame): a last-instant overshoot is forgiven if the blob fitted a frame earlier. Longer windows make runs 2-4x longer.
 const theme=()=>THEMES[R?R.zone:0]; // the sky follows the zone you've climbed to
 const skin=()=>SKINS.find(s=>s.id===S.skin)||SKINS[0];
 
@@ -541,7 +543,9 @@ let R; // run
 let blobR=HOME_R, blobVis=1, squish=0, wob=0, shake=0, freezeUntil=0, flash=0, climb=0;
 let parts=[], pops=[], zoneT=-9, pwKey="";
 let hitStop=0, pulse=0, fireT=0;   // freeze-frame on big hits, blob pulse on a great fit, on-fire trail timer
-let CH=null;                       // active friend challenge: {seed, target}
+let CH=null;                       // active friend challenge: {seed, target, gen}
+let jobs=[]; const after=(sec,fn)=>jobs.push({at:T+sec,fn});   // timers on the game clock, not the wall clock
+let pressT=-9, pressDir=0;         // last press/release, for the instant visual response
 let DC=null;                       // active daily challenge: {day, num, seed}
 
 // ---------- daily challenge: the same gates for everyone on a calendar date, one scored try ----------
@@ -563,35 +567,43 @@ const sessionStart=performance.now(); let runsSinceInter=0, lastRewardedAt=-1e9;
 function newRun(){
   const seed=DC?DC.seed:CH?CH.seed:Math.floor(Math.random()*1e6);
   R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],gems:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,smash:0,gemsGot:0,boxes:0,cont:false,doubled:false,first:S.runs===0&&!DC,t:0,daily:!!DC,log:[],
-    zone:0,prevZone:0,nextBox:6,lastType:"",pw:{shield:false,slowUntil:0,dblUntil:0},seed,rng:mulberry(seed),prng:mulberry(seed^0x5eed),chWon:false};   // prng: power-ups, so the same gates give the same boxes
-  blobR=Math.min(blobR,30); blobVis=1; parts=[]; pops=[]; sinceToggle=0; hitStop=0; pulse=0;
+    zone:0,prevZone:0,nextBox:6,lastType:"",pw:{shield:false,slowUntil:0,dblUntil:0},seed,rng:mulberry(seed),prng:mulberry(seed^0x5eed),chWon:false,
+    rh:[],row:0,bestRow:0,prevGreat:false,beatBest:false,missBy:0};   // prng: power-ups, so the same gates give the same boxes
+  blobR=Math.min(blobR,30); blobVis=1; parts=[]; pops=[]; sinceToggle=0; hitStop=0; pulse=0; jobs=[];
   spawnUntilTop(BY-310);
 }
-const speedGen=n=>Math.min(150+4.5*n,360);                     // pace used to lay out gates (same for everyone)
+// Pace rises gate by gate in waves of ten: it builds for nine gates, then the gold gate (every 10th) is a breather.
+const wave=n=>n<10?1:n%10===9?0.88:0.96+0.01*(n%10);
+const speedGen=n=>Math.min(150+4.5*n,360)*wave(n);               // pace used to lay out gates (same for everyone)
 const speed=n=> (R&&R.first&&n<6? 150 : 0) || speedGen(n);     // actual pace: the very first run starts slower
 const spacing=n=> Math.max(190,300-4*n);
 // First five gates teach by play. Gate 1 is wide: players start by holding, so holding all the way = a guaranteed SQUEEZE win.
 const SCRIPT=[190,88,136,70,120];
+// Gate-generator version. Bump it whenever makeGate, spawnUntilTop, speedGen, spacing or SCRIPT change:
+// challenge links carry it, so players on different versions are told their gates won't match.
+const GEN=2;
 
 function makeGate(y,sp){
   const n=R.n++, prev=R.gates.length?R.gates[R.gates.length-1].base:60;
   if(sp===undefined)sp=spacing(n);
-  let g;
+  let g, minG=44, maxG=176, maxDelta=135;
   if(n<SCRIPT.length) g=SCRIPT[n];
   else{
-    const k=clamp(n/40,0,1), minG=lerp(70,44,k), maxG=lerp(132,176,k);
+    const k=clamp(n/40,0,1); minG=lerp(70,44,k); maxG=lerp(132,176,k);
     const dt=sp/speedGen(n);
     const reach=2*Math.min(GROW,SHRINK)*Math.max(0,dt-RAMP*(1-MINF)/2)*0.72; // fairness: change must be physically reachable with slack
-    const maxDelta=Math.min(28+n*4,135,reach);
+    maxDelta=Math.min(28+n*4,135,reach);
     const minDelta=Math.min(18,maxDelta*0.5);              // avoid boring repeats
     let dir=R.rng()<.5?-1:1;
     if(prev-maxDelta<minG) dir=1; if(prev+maxDelta>maxG) dir=-1;
     g=clamp(prev+dir*(minDelta+R.rng()*(maxDelta-minDelta)),minG,maxG);
   }
-  const type = n>=8 && R.lastType!=="glass" && R.rng()<.16 ? "glass" : "normal";
+  const late=Math.max(0,n-47);                                   // past the speed cap, patterns get denser instead of faster
+  const type = n>=8 && R.lastType!=="glass" && R.rng()<Math.min(.24,.16+late*.003) ? "glass" : "normal";
   const gold = type==="normal" && n>0 && n%10===9;
+  if(gold&&n>=SCRIPT.length) g=clamp(Math.max(g,118),minG,Math.min(maxG,prev+maxDelta));   // breather: a wide, friendly gold gate
   const box = type==="normal" && !gold && n>=R.nextBox; if(box) R.nextBox=n+9+Math.floor(R.rng()*5);
-  const amp = type==="normal" && n>=30 ? Math.min(6+(n-30)*.6,14) : 0;        // "breathing" gates late game
+  const amp = type==="normal" && n>=30 ? Math.min(6+(n-30)*.6,14+Math.min(6,late*.15)) : 0;   // "breathing" gates late game
   const intro = type==="glass"&&!S.seen.glass ? "glass" : box&&!S.seen.box ? "box" : null;
   R.lastType=type;
   R.gates.push({y,base:g,cur:g,amp,ph:R.rng()*6,gold,type,box,intro,done:false,n,res:null,resT:0});
@@ -601,7 +613,7 @@ function spawnUntilTop(firstY){
   let top=R.gates[R.gates.length-1];
   while(top.y>-80){
     let sp=spacing(R.n), twin=false;
-    if(R.n>=15&&!top.twin&&R.rng()<.12){sp=125;twin=true}                 // twin pair: second gate arrives fast
+    if(R.n>=15&&R.n%10!==9&&!top.twin&&R.rng()<Math.min(.24,.12+Math.max(0,R.n-47)*.004)){sp=125;twin=true}   // twin pair: second gate arrives fast (never the gold breather)
     makeGate(top.y-sp,sp);
     const g=R.gates[R.gates.length-1];
     if(twin){g.twin=true;if(!g.intro&&!S.seen.twin)g.intro="twin"}
@@ -615,46 +627,75 @@ function spawnUntilTop(firstY){
 // ---------- judging ----------
 const C_WHITE="#ffffff", C_GOLD="#ffcf3a", C_GOOD="#bfe9ff", C_BAD="#ff6f91";
 const dblOn=()=>T<R.pw.dblUntil;
+const multOf=c=>1+Math.min(4,Math.floor(c/3));
+// Feedback whenever the multiplier or the fire state changes, from a gate or a gem.
+function chainFx(m0,c0){
+  const m=multOf(R.chain), fire=c0<6&&R.chain>=6;
+  if(m>m0)fx("tier",{m,quiet:fire}); else if(m<m0)fx("lost",{m:m0});
+  if(fire){popup(`ON FIRE! ×${m}`,LW/2,BY-blobR-106,"#ff9a3a",34);SFX.zone();buzz(30)}   // one message, not two
+}
+function checkBest(){if(!R.beatBest&&S.best>0&&R.score>S.best){R.beatBest=true;fx("best")}}
+// Small, self-contained feedback hooks for moments that used to pass silently.
+function fx(kind,o={}){
+  if(kind==="tier"){buzz(12+o.m*3);hitStop=Math.max(hitStop,.03);if(o.quiet)return;
+    tone(note(o.m*2),.14,"square",.045);tone(note(o.m*2+2),.2,"square",.045,0,.06);
+    popup(`×${o.m}`,Math.min(LW-34,LW/2+blobR+40),BY-blobR,C_GOLD,24+o.m*3)}
+  else if(kind==="lost"){tone(392,.22,"triangle",.1,.6);tone(294,.26,"triangle",.08,.6,.07);
+    popup(`×${o.m} LOST`,Math.max(56,LW/2-blobR-48),BY-blobR,C_BAD,20)}
+  else if(kind==="best"){popup("NEW BEST!",LW/2,LH*.24,C_GOLD,40);SFX.zone();confetti();buzz(25)}
+  else if(kind==="glow"){tone(988,.1,"sine",.06);tone(1319,.14,"sine",.05,0,.05);
+    const p=$("pips").children[R.glow-1];if(p){p.classList.remove("pop");void p.offsetWidth;p.classList.add("pop")}}
+}
 function judge(g){
-  const gap=g.cur, d=2*blobR, fit=d/gap, early=R.passed<5;
-  const tol=early?10:6;
+  const gap=g.cur, ease=clamp((R.passed-5)/10,0,1);           // gates 5→15: the rules tighten gradually, not in one frame
+  const tol=lerp(10,6,ease), pTh=lerp(0.80,0.84,ease);
+  let d=2*blobR;
+  // overshoot grace: if the blob fitted a moment ago (GRACE), a last-instant overshoot counts as a squeeze, not a crash
+  if(g.type!=="glass"&&d>gap+tol&&R.rh.length&&2*Math.min(...R.rh.map(x=>x[1]))<=gap+tol) d=gap+tol;
+  const fit=d/gap, m0=multOf(R.chain), c0=R.chain, glow0=R.glow;
   if(g.intro){S.seen[g.intro]=true;save()}
   if(g.type!=="glass"&&d>gap+tol){
     if(R.pw.shield){ // shield pops instead of the blob
-      R.pw.shield=false;R.passed++;R.chain=0;blobR=Math.min(blobR,gap*.45);shake=6;g.broken=true;shatter(g);SFX.shield();buzz(30);hitStop=.06;
-      popup("SHIELD SAVED YOU!",LW/2,BY-blobR-30,C_GOOD,24);updateHud(true);return}
+      R.pw.shield=false;R.passed++;R.chain=0;R.row=0;R.prevGreat=false;blobR=Math.min(blobR,gap*.45);shake=6;g.broken=true;shatter(g);SFX.shield();buzz(30);hitStop=.06;
+      popup("SHIELD SAVED YOU!",LW/2,BY-blobR-30,C_GOOD,24);if(m0>1)fx("lost",{m:m0});updateHud(true);return}
+    R.missBy=Math.max(1,Math.ceil(d-(gap+tol)));
     crash(g);return}
   R.passed++;
-  const pTh=early?0.80:0.84;
   let label,col,pts=0,great=false;
   if(g.type==="glass"){
     if(d>gap-1.5){R.chain++;R.perfects++;R.smash++;pts=4;label="SMASH!";col=C_GOOD;great=true;g.broken=true;shatter(g);
       SFX.smash();tone(note(R.chain+1),.2,"triangle",.16,0,.04);buzz(20);shake=5;hitStop=.06;if(R.glow<3)R.glow++}
-    else if(fit>=0.60){R.chain=0;pts=1;label="BIGGER!";col=C_GOOD;SFX.good()}
+    else if(fit>=0.60){R.chain=Math.max(0,R.chain-3);pts=1;label="BIGGER!";col=C_GOOD;SFX.good()}
     else{R.chain=0;label="LOOSE";col=C_BAD;SFX.loose();buzz(25);R.glow--}
   } else if(d>gap-1.5){ // squeeze: tighter than perfect, tiny overlap allowed
-    R.chain++;R.perfects++;R.squeezes++;pts=5;label="SQUEEZE!";col=C_GOLD;great=true;SFX.squeeze();buzz(18);burst(g,34,true);flash=.5;hitStop=.05;
+    R.chain++;R.perfects++;R.squeezes++;pts=5;label="SQUEEZE!";col=C_GOLD;great=true;SFX.squeeze();buzz(18);burst(g,34,true);flash=.5;hitStop=.05;g.flex=T;
     if(R.glow<3)R.glow++;
   } else if(fit>=pTh){
     R.chain++;R.perfects++;pts=3;label=R.chain>=3?`PERFECT ×${R.chain}`:"PERFECT!";col=g.gold?C_GOLD:C_WHITE;great=true;SFX.perfect(R.chain-1);buzz(10);burst(g,20,false);
     if(R.glow<3)R.glow++;
   } else if(fit>=0.60){
-    R.chain=0;pts=1;label="GOOD";col=C_GOOD;SFX.good();burst(g,6,false);
+    R.chain=Math.max(0,R.chain-3);pts=1;label="GOOD";col=C_GOOD;SFX.good();burst(g,6,false);   // a pass that isn't perfect costs one multiplier step
   } else {
     R.chain=0;label=R.first&&R.passed<8?"TOO LOOSE!":"LOOSE";col=C_BAD;SFX.loose();buzz(25);R.glow--;
   }
   R.log.push(label==="SQUEEZE!"?"S":great?"P":pts>0?"G":"L");
+  R.row=great?R.row+1:0; R.bestRow=Math.max(R.bestRow,R.row);   // perfects in a row (missions)
   R.bestChain=Math.max(R.bestChain,R.chain);
-  const mult=1+Math.min(4,Math.floor(R.chain/3));
+  const mult=multOf(R.chain);
   R.score+=pts*mult*(dblOn()?2:1);
   if(great&&g.type!=="glass"){const c=g.gold?5:1;R.coins+=c;if(g.gold){R.gold++;label="GOLD! +5";SFX.coin()} else if(R.chain%3===0)SFX.coin();}
   g.res=label; g.resT=T;
   popup(label,LW/2,BY-blobR-30,col,label.length>9?26:32);
-  if(g.box){if(great)openBox();else popup("BOX MISSED",LW/2,BY-blobR-66,C_BAD,20)}
+  // twin snug: both gates of a twin pair fitted perfectly
+  if(g.twin&&great&&R.prevGreat){const b=6*mult;R.score+=b;if(R.glow<3)R.glow++;popup(`TWIN SNUG! +${b}`,LW/2,BY-blobR-140,C_GOLD,24);SFX.reward();buzz(20)}
+  R.prevGreat=great;
+  if(g.box){if(great)openBox(glow0);else popup("BOX MISSED",LW/2,BY-blobR-66,C_BAD,20)}
   if(great)pulse=.3;
-  if(great&&R.chain===6){popup("ON FIRE!",LW/2,BY-blobR-106,"#ff9a3a",34);SFX.zone();buzz(30)}
+  chainFx(m0,c0);
+  if(R.glow>glow0)fx("glow");
   if(R.passed===10||R.passed===50){popup(`${R.passed} GATES!`,LW/2,BY-150,C_GOLD,38);SFX.reward();confetti()}
   if(CH&&!R.chWon&&R.score>CH.target){R.chWon=true;popup("CHALLENGE BEATEN!",LW/2,LH*.3,"#5fd34a",30);confetti();SFX.zone()}
+  checkBest();
   const z=zoneOf(R.passed);
   if(z>R.zone){R.prevZone=R.zone;R.zone=z;zoneT=T;confetti();SFX.zone();SFX.whoosh();
     popup(`ZONE ${z+1}`,LW/2,LH*.3-30,"#ffffff",26);popup(THEMES[z].name.toUpperCase(),LW/2,LH*.3+6,C_GOLD,44);
@@ -662,8 +703,11 @@ function judge(g){
   updateHud(true);
   if(R.glow<=0){fadeOut()}
 }
-function openBox(){
-  const keys=Object.keys(POWERS),k=keys[Math.floor(R.prng()*keys.length)];R.boxes++;
+// Mystery boxes read the moment: a shield when you're hurting, double points when you're hot, slow-mo when it's fast.
+function openBox(glow0){
+  const keys=Object.keys(POWERS), roll=keys[Math.floor(R.prng()*keys.length)];   // always draw, so the seeded stream stays in step
+  const k=glow0<=1?"shield":R.chain>=6?"double":speed(R.passed)>=300?"slow":roll;
+  R.boxes++;
   if(k==="shield")R.pw.shield=true; else if(k==="slow")R.pw.slowUntil=T+4; else R.pw.dblUntil=T+6;
   popup(POWERS[k][0],LW/2,BY-blobR-70,C_GOLD,30);SFX.reward();confetti();
 }
@@ -675,9 +719,9 @@ function shatter(g){
 function crash(g){
   state="dying"; holding=false; shake=14; squish=1; hitStop=.09; SFX.crash(); buzz([30,40,60]);
   for(let i=0;i<30;i++)parts.push({x:LW/2+rand(-blobR,blobR),y:BY+rand(-8,8),vx:rand(-260,260),vy:rand(-340,40),life:rand(.5,1),max:1,c:skin().c,s:rand(4,9),g:700});
-  R.end="crash"; R.log.push("X"); setTimeout(endRun,900);
+  R.end="crash"; R.log.push("X"); after(.9,endRun);
 }
-function fadeOut(){state="dying";holding=false;R.end="fade";R.log.push("F");SFX.loose();setTimeout(endRun,900)}
+function fadeOut(){state="dying";holding=false;R.end="fade";R.log.push("F");SFX.loose();after(.9,endRun)}
 // After a fail: offer one rewarded revive (player's choice, 4 s), then score the run exactly once.
 function endRun(){
   if(!R.cont&&!R.daily&&R.score>=6){state="revive";reviveModal();return}   // the daily is one clean try for everyone
@@ -701,6 +745,7 @@ function frame(now){
   const dt=Math.min(.033,(now-last)/1000); last=now;
   if(!paused){
     T+=dt;                                   // game clock stops while paused, so power-up timers don't run out
+    if(jobs.length){const due=jobs.filter(j=>T>=j.at);if(due.length){jobs=jobs.filter(j=>T<j.at);due.forEach(j=>j.fn())}}
     if(hitStop>0)hitStop-=dt; else update(dt);
   }
   music(); draw(); requestAnimationFrame(frame);
@@ -711,11 +756,12 @@ function update(dt){
     R.t+=dt;
     if(R.chain>=6){fireT-=dt;if(fireT<=0){fireT=.05;   // on-fire trail
       parts.push({x:LW/2+rand(-blobR*.7,blobR*.7),y:BY+blobR*.5,vx:rand(-20,20),vy:rand(120,220),life:.5,max:.5,c:Math.random()<.5?"#ffcf3a":"#ff9a3a",s:rand(3,6),g:0})}}
-    if(holding!==lastHold){lastHold=holding;sinceToggle=0} sinceToggle+=dt;
+    if(holding!==lastHold){lastHold=holding;sinceToggle=0;pressT=T;pressDir=holding?1:-1} sinceToggle+=dt;
     let rate=rateNow(holding);
     // beginner assist: the blob gets 'sticky' near the perfect size for the first gates of the first runs
     if(S.runs<3&&R.passed<5){const ng=R.gates.find(g=>!g.done);if(ng&&Math.abs(blobR-ng.cur*.93/2)<7)rate*=.3}
     if(holding) blobR=Math.min(RMAX,blobR+rate*dt); else blobR=Math.max(RMIN,blobR-rate*dt);
+    R.rh.push([T,blobR]); while(R.rh.length&&T-R.rh[0][0]>GRACE)R.rh.shift();   // recent sizes, for the overshoot grace
     humSet();
     if(T>=freezeUntil){
       // first-time mechanic: show a banner and slow down while it approaches
@@ -726,6 +772,9 @@ function update(dt){
       for(const m of R.gems){m.y+=v*dt;
         if(!m.done&&m.y>=BY){m.done=true;if(m.intro){S.seen.gem=true;save()}
           if(blobR+10>=Math.abs(m.x-LW/2)){m.taken=true;R.gemsGot++;R.coins++;R.score+=dblOn()?4:2;SFX.gem();buzz(8);
+            if(R.chain>=3){const m0=multOf(R.chain),c0=R.chain;R.chain++;R.bestChain=Math.max(R.bestChain,R.chain);   // on a chain, a gem extends it
+              popup("CHAIN +1",m.x,m.y-52,"#5cd6ff",18);chainFx(m0,c0)}
+            checkBest();
             popup("+GEM",m.x,m.y-26,"#5cd6ff",22);for(let i=0;i<10;i++){const a=rand(0,7);parts.push({x:m.x,y:m.y,vx:Math.cos(a)*160,vy:Math.sin(a)*160,life:.5,max:.5,c:"#5cd6ff",s:4,g:200,star:true,rot:0,vr:6})}updateHud(true)}}}
       R.gems=R.gems.filter(m=>m.y<LH+40&&!m.taken);
       for(const g of R.gates){g.y+=v*dt; g.cur=g.base+g.amp*Math.sin(T*3+g.ph);
@@ -739,13 +788,13 @@ function update(dt){
     climb=Math.max(0,climb-dt*Math.max(300,climb*2.5)); // hills rise back into view
   } else if(state==="dying"){humSet(true); if(R.end==="fade") blobVis=Math.max(0,blobVis-dt*1.4);}
   for(const p of parts){p.life-=dt;if(!p.ring){p.vy+=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.vr)p.rot+=p.vr*dt}else p.r+=260*dt}
-  parts=parts.filter(p=>p.life>0);
+  parts=parts.filter(p=>p.life>0); if(parts.length>260)parts.splice(0,parts.length-260);
   for(const p of pops){p.life-=dt*0.9;p.age+=dt;p.y-=36*dt}
   pops=pops.filter(p=>p.life>0);
   const sp=state==="play"?speed(R.passed):18;
   for(const c of clouds){c.y+=sp*.22*c.z*dt;c.x+=6*c.z*dt;if(c.y>LH+80){c.y=-80;c.x=rand(-40,LW+40)}if(c.x>LW+90)c.x=-90}
   for(const s of stars){s.y+=sp*.08*dt;if(s.y>LH+5){s.y=-5;s.x=Math.random()*LW}}
-  shake=Math.max(0,shake-dt*40); squish=Math.max(0,squish-dt*2); flash=Math.max(0,flash-dt*2);
+  shake=Math.max(0,shake-dt*(8+shake*4));            // big hits fall off fast, small ones fade softly squish=Math.max(0,squish-dt*2); flash=Math.max(0,flash-dt*2);
 }
 function humSet(off){if(!AC||!humGain)return;const t=AC.currentTime;
   if(off||state!=="play"){humGain.gain.setTargetAtTime(0,t,.05);return}
@@ -776,7 +825,7 @@ function sky(t,a){if(a<=0)return;ctx.globalAlpha=a;const bg=ctx.createLinearGrad
 function draw(){
   const th=theme();
   ctx.setTransform(DPR*SC,0,0,DPR*SC,0,0);
-  if(shake>0)ctx.translate(rand(-shake,shake)*.4,rand(-shake,shake)*.4);
+  if(shake>0){const k=(shake/14)**2*9,f=T*40;ctx.translate(k*.5*Math.sin(f*1.31),k*Math.sin(f+1.7))}   // trauma²: smashes nudge, crashes slam
   const zk=R?clamp((T-zoneT)/1.6,0,1):1;
   if(zk<1)sky(THEMES[R.prevZone],1);
   sky(th,zk);
@@ -845,7 +894,8 @@ function drawGem(m){
 function drawGate(g,th){
   if(g.broken)return;
   if(g.type==="glass")return drawGlass(g);
-  const half=g.cur/2, cx=LW/2, y=g.y, col=g.gold?"#ffd84a":th.gate, dk=g.gold?"#d19a10":th.gateD;
+  const fl=g.flex?Math.exp(-(T-g.flex)*9)*Math.sin((T-g.flex)*42)*6:0;   // walls flex outward after a squeeze
+  const half=g.cur/2+fl, cx=LW/2, y=g.y, col=g.gold?"#ffd84a":th.gate, dk=g.gold?"#d19a10":th.gateD;
   // ghost ring: shows the perfect size; fades as the player gets better
   const ghostA = R.passed<6 ? .9 : R.passed<20 ? .55 : .32;
   if(!g.done&&y>-40){ctx.setLineDash([7,7]);ctx.lineWidth=5;ctx.strokeStyle=`rgba(43,32,64,${ghostA*.25})`;ctx.beginPath();ctx.arc(cx,y,half*.93,0,7);ctx.stroke();
@@ -964,6 +1014,7 @@ function drawBlob(){
   const w=Math.sin(wob)*(holding?.035:.015); sx+=w; sy-=w;
   if(state==="home"){const b=Math.sin(T*3);sx+=b*.03;sy-=b*.03}
   if(squish>0){sx+=squish*.6;sy-=squish*.5}
+  if(state==="play"){const pk=Math.exp(-(T-pressT)*16)*pressDir;sy+=pk*.07}   // instant response to a press/release; height only
   sx+=pulse*.14;sy+=pulse*.14;
   const tight=R&&state==="play"&&R.gates.some(g=>!g.done&&g.y>BY-90&&2*blobR>g.cur*.9);
   const face=state==="dying"&&R&&R.end==="crash"?"dazed":(tight||holding&&blobR>70)?"strain":"open";
@@ -1009,7 +1060,7 @@ function gameOver(){
     +(nextMedal?`<span class="medalnext">${nextMedal[0]} medal at ${nextMedal[1]}</span>`:"");
   $("oBestWrap").innerHTML=isBest&&R.score>0?'':`<div class="bestline">${ic("trophy")}Best ${S.best}</div>`;
   let msg="";
-  if(R.end==="crash") msg=S.runs<=3?"Too big! Let go to shrink.":"Too big for that gap.";
+  if(R.end==="crash") msg=R.missBy<=3?`So close! Just ${R.missBy}px too big.`:S.runs<=3?"Too big! Let go to shrink.":"Too big for that gap.";
   else msg=S.runs<=3?"Too loose! Hold to grow.":"Fit tighter to keep your glow.";
   if(!isBest&&prevBest-R.score<=Math.max(3,Math.round(prevBest*.15))&&R.score>0) msg=`So close! ${prevBest-R.score+1} more beats your best.`;
   if(isBest&&prevBest>0) msg=`+${R.score-prevBest} over your old best!`;
@@ -1029,7 +1080,7 @@ function gameOver(){
 }
 let overLock=0;
 function continueRun(){
-  R.cont=true; R.glow=3; R.chain=0; blobR=30; blobVis=1; sinceToggle=0;
+  R.cont=true; R.glow=3; R.chain=0; R.row=0; R.rh=[]; blobR=30; blobVis=1; sinceToggle=0;
   R.gates=R.gates.filter(g=>g.y<BY-260);R.gems=R.gems.filter(m=>m.y<BY-260);
   if(!R.gates.length)makeGate(BY-300);
   state="play"; freezeUntil=T+1.1; show("hud"); updateHud();
@@ -1106,7 +1157,7 @@ function parentGate(onPass){
 
 // ---------- challenge a friend: a link that carries this run's seed and score ----------
 function shareChallenge(){
-  const url=(window.SNUG_SHARE_BASE||location.href.split(/[?#]/)[0])+`?c=${R.seed}-${R.score}`;   // the store app links to the public web game
+  const url=(window.SNUG_SHARE_BASE||location.href.split(/[?#]/)[0])+`?c=${R.seed}-${R.score}-g${GEN}`;   // the store app links to the public web game
   const text=`I scored ${R.score} in Snug! You get the exact same gates. Can you beat me?`;
   const fallback=()=>{const m=panel("CHALLENGE","var(--purple)",`<div class="msg">Copy this link and send it to a friend:</div><div class="linkbox">${url}</div>`);return m};
   if(navigator.share){navigator.share({title:"Snug",text,url}).catch(e=>{if(!e||e.name!=="AbortError")fallback()});return}
@@ -1115,11 +1166,11 @@ function shareChallenge(){
 }
 function readChallenge(){
   if(/[?&]daily\b/.test(location.search)){try{history.replaceState(null,"",location.pathname)}catch(e){}dcPanel();return}   // a shared daily result
-  const m=/[?&]c=(\d{1,7})-(\d{1,6})/.exec(location.search);
+  const m=/[?&]c=(\d{1,7})-(\d{1,6})(?:-g(\d+))?/.exec(location.search);
   if(!m)return;
-  CH={seed:+m[1],target:+m[2]};
+  CH={seed:+m[1],target:+m[2],gen:m[3]?+m[3]:GEN};
   const p=panel("CHALLENGE!","var(--purple)",`<div class="msg">A friend scored</div><div class="chalscore outline">${CH.target}</div>
-    <div class="msg">You get the exact same gates. Can you beat it?</div><button class="btn wide" data-go>${ic("play")}LET'S GO</button>`,{close:false});
+    <div class="msg">${CH.gen===GEN?"You get the exact same gates. Can you beat it?":"This challenge came from a different version of Snug, so the gates won't match exactly. Can you beat it anyway?"}</div><button class="btn wide" data-go>${ic("play")}LET'S GO</button>`,{close:false});
   p.querySelector("[data-go]").onclick=()=>{SFX.ui();p.remove()};
 }
 
@@ -1203,7 +1254,7 @@ function ensureMissions(){
 function trackMissions(r){
   ensureMissions(); const done=[];
   for(const m of S.missions){if(m.done)continue;
-    const v={perfRun:r.perfects,chain:r.bestChain,gatesRun:r.passed,scoreRun:r.score}[m.k];
+    const v={perfRun:r.perfects,chain:r.bestRow,gatesRun:r.passed,scoreRun:r.score}[m.k];
     if(v!==undefined) m.p=Math.max(m.p,v);
     else if(m.k==="runs") m.p++;
     else if(m.k==="coins") m.p+=r.coins;
@@ -1346,7 +1397,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="9";
+const BUILD="10";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{

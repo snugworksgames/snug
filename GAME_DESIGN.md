@@ -6,10 +6,21 @@
 **Session:** 15–60 s runs (simulated medians: casual 17 s, regular 23 s, skilled 40 s).
 **Monetization:** rewarded ads the player chooses, plus a rare, capped interstitial. Optional "Remove ads" purchase.
 
-> **Status (build 5):** the web game (`web/snug.html`, hosted from `docs/`) is the product. It has moved past this
+> **Status (build 10):** the web game (`web/snug.html`, hosted from `docs/`) is the product. It has moved past this
 > document in places: cartoon art direction, hats, music, medals, challenge links, a pause button and offline play.
 > The web build shows no ads; real ads arrive with the store app (see [LAUNCH_PLAN.md](LAUNCH_PLAN.md)).
 > The Unity prototype in `unity/` covers only the original core rules and is not kept in sync.
+
+**Added in build 10: feel and pacing pass** (measured with a human-model simulator before shipping)
+- **Gentler handoff:** the rules tighten gradually over gates 5–15 (crash tolerance 10 → 6 px, Perfect 0.80 → 0.84) instead of all at once at gate 5, where most early runs used to end.
+- **Multiplier:** a Good now costs one multiplier step (chain −3) instead of the whole chain. Loose still resets it.
+- **Zones** at gates 15 / 35 / 60, so most players see a new sky in their first sessions.
+- **Waves of ten:** the pace builds for nine gates, then the gold gate is a slower, wide breather. Past gate 47 (the speed cap), glass gates, twins and breathing gaps get denser instead of faster.
+- **Overshoot grace (one frame):** if the blob fitted a frame earlier, a last-instant overshoot counts as a Squeeze instead of a crash. In simulation it cuts crashes on narrow gaps by roughly 17–38%. Tested and rejected: slowing growth on small blobs (helped regular and skilled players, hurt casual ones) and longer grace windows (25–70 ms made runs 2–4× longer).
+- **Medals** rescaled to 80 / 220 / 450 / 900 for the new scoring, keeping about the same rarity; the "score N in one run" mission now asks for 120.
+- **Feedback:** a sound, buzz and popup when the multiplier steps up or is lost; NEW BEST the moment you pass your best; glow refills pop; walls flex on a Squeeze; "So close! Just 2px too big"; the blob reacts within one frame of a press; weightier screen shake.
+- **Combos from existing pieces:** on a chain of 3+, a gem extends the chain; mystery boxes read the moment (shield when your glow is low, double points when you're on fire, slow-mo at top speed); TWIN SNUG bonus when both gates of a twin pair are perfect.
+- **Under the hood:** challenge links carry the gate-generator version (`GEN`), so players on different versions are told their gates won't match; gameplay timers run on the game clock; particle cap.
 
 **Added in build 5**
 - **Music and sound:** a generated soundtrack that changes key with each zone, speeds up as you climb and adds a layer while you're on fire. Separate music and sound switches.
@@ -48,12 +59,12 @@
 | Result | Rule | Points | Effect | Feedback |
 |---|---|---|---|---|
 | **Squeeze** | diameter within 1.5 px of the gap (up to 6 px over is forgiven) | 5 × mult | +1 glow, +1 chain, +1 coin | Big burst, ring, screen flash, rising chime, medium haptic |
-| **Perfect** | fit ≥ 0.84 (0.80 for the first 5 gates) | 3 × mult | +1 glow, +1 chain, +1 coin | Burst + ring, pentatonic note that rises with the chain, light haptic |
-| **Good** | fit ≥ 0.60 | 1 × mult | chain resets | Small sparkle, soft pluck |
+| **Perfect** | fit ≥ 0.84 (0.80 for the first 5 gates, tightening gradually until gate 15) | 3 × mult | +1 glow, +1 chain, +1 coin | Burst + ring, pentatonic note that rises with the chain, light haptic |
+| **Good** | fit ≥ 0.60 | 1 × mult | chain −3 (one multiplier step) | Small sparkle, soft pluck |
 | **Loose** | fit < 0.60 | 0 | −1 glow (of 3), chain resets | Blob dims, low thud, red label |
 | **Crash** | diameter > gap + 6 px | run ends | | Splat, screen shake, heavy haptic, dazed eyes |
 
-   Multiplier = 1 + chain ÷ 3 (capped at ×5). Every 10th gate is **gold** and pays 5 coins for a Perfect.
+   Multiplier = 1 + chain ÷ 3 (capped at ×5). Every 10th gate is **gold**: a wide, slower breather that pays 5 coins for a Perfect.
 4. **Difficulty rises** (section 4). The run ends on a crash, or when glow hits 0 after three loose fits.
 5. **Revive offer** (once per run, only if score ≥ 6): "Keep going?" with a 4-second countdown and a rewarded ad. Saying no or letting it time out goes straight to results.
 6. **Results:** score, best (or a NEW BEST badge), a near-miss line ("Only 3 more to beat your best!"), gates, perfects and coins. Mission and level-up toasts follow. **2× coins** via an optional rewarded ad.
@@ -75,7 +86,7 @@ There is no tutorial screen. Everything is taught by the first five scripted gat
 | ~10 s | Gate 10 is gold (+5 coins) and "10 gates!" fires with confetti. The simulated first-run median is exactly 10 gates. | Progress and reward. |
 | 15–30 s | Speed ramps up and gaps swing wider. The first death is clearly caused ("Too big! Let go to shrink."). Any score above 0 on run 1 shows NEW BEST. | "I can do better", then hold to retry. |
 
-Beginner assists: the sticky zone and context hints switch off after 3 runs, and the slower pace only applies to the very first run. Every run starts gentle: wider crash tolerance (10 px) and an easier Perfect for its first 5 gates, plus an extra-visible ghost ring (55% opacity, fading to 16% by gate 20).
+Beginner assists: the sticky zone and context hints switch off after 3 runs, and the slower pace only applies to the very first run. Every run starts gentle: wider crash tolerance (10 px) and an easier Perfect for its first 5 gates, tightening gradually until gate 15, plus an extra-visible ghost ring (55% opacity, fading to 16% by gate 20).
 
 ---
 
@@ -95,7 +106,7 @@ All values are in logical px on a 360-wide screen. `n` = gates passed.
 - The size change between consecutive gates is at most 72% of what the blob can physically change in the time between them, accounting for the slow start of the speed ramp.
 - Every gap fits the smallest blob, and a Perfect is always reachable at the largest blob.
 - Consecutive gaps usually differ by at least 18 px, so there are no dull repeats, and the direction flips near the range limits.
-- Perfect thresholds stay the same after the first 5 gates. Difficulty comes from pace, not from moving goalposts.
+- Perfect thresholds tighten gradually from gate 5 to 15, then stay the same. Difficulty comes from pace, not from moving goalposts.
 
 **Simulation results** (`tools/SnugSim.cs`): bots with human-like reaction lag (160–300 ms), imperfect lag compensation, a 90 ms tapping limit and 3.5–10% size misjudgement play the real rules, 2,000 runs per profile:
 
@@ -120,7 +131,7 @@ Each mechanic appears mid-run the first time with a "NEW!" banner while the game
 | **Glass gates** | gate 9+, about 16% of gates, never two in a row | The rule flips: be **bigger** than the gap to SMASH it (+4 points, chain, +1 glow). Too small is loose. You can't crash on glass. | Breaks autopilot. You have to read each gate. |
 | **Mystery boxes** | gate 7, then every 9–13 gates | A "?" box in the gap. A Perfect or Squeeze opens it for a random power-up: **Shield** (absorbs one crash), **Slow-mo** (60% speed for 4 s) or **Double points** (6 s). | Surprise reward for precision. |
 | **Twin gates** | gate 16+, about 12% | The next gate arrives after 125 px instead of the normal spacing. The size change is limited to what's reachable in that time. | Rhythm change and burst intensity. |
-| **Zones** | gates 25 / 50 / 80 | Sky changes Meadow → Sunset → Candy → Starry with a banner and confetti. Zones reached are saved in the Collection; results show progress to the next one. | A long-term "what's next?" goal and a visible journey. |
+| **Zones** | gates 15 / 35 / 60 | Sky changes Meadow → Sunset → Candy → Starry with a banner and confetti. Zones reached are saved in the Collection; results show progress to the next one. | A long-term "what's next?" goal and a visible journey. |
 
 Missions added: smash glass gates, grab gems, open mystery boxes. The world picker was replaced by the zone collection, so new skies are earned by climbing rather than by level.
 

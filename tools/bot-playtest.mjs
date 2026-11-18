@@ -125,6 +125,7 @@ await page.click("#bSet"); await page.waitForTimeout(300); await shot(page, "set
 await page.click("[data-x]"); await page.waitForTimeout(200);
 const peak = await play(page, 70000, { label: "crown" });
 check(peak.passed >= 30, `bot run got through ${peak.passed} gates (needs 30+)`);
+check(await page.evaluate(() => window.__g().R.beatBest === true), "passing your best mid-run is celebrated (NEW BEST during the run)");
 check(peak.chain >= 6, `bot reached an on-fire chain (best chain ${peak.chain})`);
 await finish(page);   // if the bot is still alive at the time limit, let go and let the run end
 await shot(page, "results");
@@ -148,7 +149,7 @@ if (g2) await page.click(`.gate [data-a="${g2.ans}"]`);
 await page.waitForTimeout(600);
 await shot(page, "share-after-gate");
 const shared = await page.evaluate(() => (document.querySelector(".linkbox") || document.querySelector(".toast") || {}).textContent || "");
-check(/\?c=\d+-\d+/.test(shared) || /copied/i.test(shared), `challenge button produces a link (${shared.slice(-40)})`);
+check(/\?c=\d+-\d+-g\d+/.test(shared) || /copied/i.test(shared), `challenge button produces a link with the gate version (${shared.slice(-40)})`);
 if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link"); await page.click("[data-x]"); await page.waitForTimeout(200); }
 
 // 3. Pause
@@ -158,6 +159,28 @@ const y1 = await page.evaluate(() => window.__g().R.gates[0].y); await page.wait
 const y2 = await page.evaluate(() => window.__g().R.gates[0].y);
 check(y1 === y2, "pause button freezes the run");
 await shot(page, "paused");
+
+// 3b. A Good costs one multiplier step, not the whole chain
+const mg = await open(browser, base, rich);
+await startByTap(mg); await mg.mouse.up();
+{
+  const mb = await mg.locator("#cv").boundingBox();
+  await mg.mouse.move(mb.x + mb.width / 2, mb.y + mb.height * 0.45);
+  let held = false, primed = false;
+  for (let i = 0; i < 2000; i++) {
+    const s = await mg.evaluate(() => { const g = window.__g(); const ng = g.R && g.R.gates.find((x) => !x.done);
+      return { state: g.state, r: g.blobR, passed: g.R ? g.R.passed : 0, gap: ng && ng.cur, gy: ng && ng.y, BY: g.BY }; });
+    if (s.state !== "play" || s.passed >= 1) break;
+    if (!primed && s.gy > s.BY - 120) { primed = true; await mg.evaluate(() => { window.__g().R.chain = 8; }); }   // ×3, just before the gate
+    const want = s.r < (s.gap * 0.70) / 2;                                                                   // aim for a Good
+    if (want && !held) { await mg.mouse.down(); held = true; } else if (!want && held) { await mg.mouse.up(); held = false; }
+    await mg.waitForTimeout(10);
+  }
+  if (held) await mg.mouse.up();
+  const after = await mg.evaluate(() => ({ chain: window.__g().R.chain, last: window.__g().R.log[window.__g().R.log.length - 1] }));
+  check(after.last === "G" && after.chain === 5, `a Good costs one multiplier step (chain 8 -> ${after.chain}, result ${after.last})`);
+}
+await mg.context().close();
 
 // 4. Challenge link round trip: two players, same seed, same gates
 const seed = 424242, target = 55;
@@ -180,6 +203,11 @@ check(same && common.length >= 15, `both players get identical gates (compared $
 const won = await a.evaluate(() => ({ won: window.__g().R.chWon, score: window.__g().R.score, title: document.getElementById("oTitle").textContent }));
 check(won.score > target && won.won && won.title === "YOU WIN!", `beating the target shows YOU WIN (score ${won.score} vs ${target})`);
 await shot(a, "challenge-result");
+
+// 4b. A challenge link from another gate-generator version says the gates won't match
+const old = await open(browser, `${base}?c=4242-30-g1`, rich);
+check(/different version/i.test(await old.locator(".modal").first().textContent()), "a challenge from another version warns that gates won't match");
+await old.context().close();
 
 // 5. Daily challenge: same gates for two players, one scored try, no revive, result saved and shareable
 const d1 = await open(browser, base, rich);
