@@ -11,6 +11,14 @@
 > The web build shows no ads; real ads arrive with the store app (see [LAUNCH_PLAN.md](LAUNCH_PLAN.md)).
 > The Unity prototype in `unity/` covers only the original core rules and is not kept in sync.
 
+**Interface pass (builds 12–13)**
+- Readable buttons: fills darkened until white text passes 3:1, thin ink outline on button and banner text.
+- Calmer HUD: smaller score that rolls up, no in-run coin counter, multiplier chip colored by level, power-ups shown as draining rings, challenge progress under the score.
+- Result words sit under the blob and ride down with the gate you passed, sized by importance (SQUEEZE loud, GOOD quiet), so they never cover the next gap.
+- Pause menu (resume with a READY? moment, music, sounds, quit; quitting the daily uses your try).
+- Results arrive in sequence; mission and level rewards land inside the panel instead of covering the banner; PLAY pulses three times.
+- The NEW! banner is a compact strip at the bottom, so you can see the gate it introduces. Panels animate out.
+
 **Added in build 10: feel and pacing pass** (measured with a human-model simulator before shipping)
 - **Gentler handoff:** the rules tighten gradually over gates 5–15 (crash tolerance 10 → 6 px, Perfect 0.80 → 0.84) instead of all at once at gate 5, where most early runs used to end.
 - **Multiplier:** a Good now costs one multiplier step (chain −3) instead of the whole chain. Loose still resets it.

@@ -112,6 +112,13 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .mult{justify-self:end;margin-top:12px;font-family:var(--display);font-size:24px;color:#fff;background:var(--pink);border:3px solid var(--ink);border-radius:14px;
   padding:2px 10px 4px;box-shadow:0 3px 0 var(--ink);text-shadow:var(--o2);transform:rotate(6deg);transition:transform .15s}
 .mult:empty{display:none}
+/* multiplier heats up with its level */
+.mult[data-m="2"]{background:var(--blue)} .mult[data-m="3"]{background:var(--green)} .mult[data-m="4"]{background:#f08a3c}
+.mult[data-m="5"]{background:var(--yellow);color:var(--ink);text-shadow:none;box-shadow:0 0 16px rgba(255,207,58,.9),0 3px 0 var(--ink)}
+/* friend challenge: progress toward the target, right under the score */
+#score.target::after{content:"";display:block;width:110px;height:9px;margin:5px auto 0;border-radius:6px;border:2px solid var(--ink);
+  background:linear-gradient(90deg,var(--yellow) calc(var(--cp,0)*100%),rgba(255,255,255,.65) 0)}
+#score.target.won::after{background:var(--green)}
 
 /* ---- panels ---- */
 .panel{position:relative;background:var(--paper);border:4px solid var(--ink);border-radius:28px;box-shadow:0 8px 0 var(--ink);
@@ -129,7 +136,7 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .scroll{overflow:auto;max-height:min(62vh,520px);margin:0 -6px;padding:4px 6px 8px}
 
 /* results */
-#over{justify-content:center;gap:28px}
+#over{justify-content:center;gap:20px}
 .result{margin-top:10px}
 .result .big{font-family:var(--display);font-size:84px;line-height:.9;font-variant-numeric:tabular-nums}
 .medalrow{display:grid;gap:3px;justify-items:center}
@@ -222,8 +229,11 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .intro b{font-family:var(--display);font-weight:400;font-size:21px;line-height:1.05}
 .intro span{font-weight:900;font-size:14px}
 .pwchips{display:grid;justify-items:end;gap:6px;margin-top:10px}
-.pwchip{display:flex;align-items:center;gap:4px;font-family:var(--display);font-size:16px;background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:1px 8px 2px 4px;box-shadow:0 3px 0 var(--ink)}
-.pwchip .ic{font-size:22px}
+/* power-ups: a ring that drains as the power-up runs out (--p from 1 to 0, set every frame) */
+.pwchip{--p:1;--pc:var(--blue);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--pc) calc(var(--p)*1turn),#d9cfe6 0);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
+.pwchip .ic{font-size:20px;width:28px;height:28px;padding:3px;border-radius:50%;background:var(--paper)}
+.pwchip[data-k="shield"]{--pc:var(--green)} .pwchip[data-k="slow"]{--pc:var(--blue)} .pwchip[data-k="dbl"]{--pc:#f08a3c}
 .zonebar{display:grid;gap:4px;text-align:left;font-weight:900;font-size:14px}
 .zonebar b{font-family:var(--display);font-weight:400;font-size:16px}
 .tile .state .ic{display:inline;vertical-align:-2px}
@@ -247,7 +257,29 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .gate{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .gateq{font-family:var(--display);font-size:40px;color:var(--ink)}
 .linkbox{font-family:var(--body);font-size:13px;font-weight:800;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;word-break:break-all;-webkit-user-select:text;user-select:text}
-@media (prefers-reduced-motion:reduce){.holdhint,.logo h1 span{animation:none}*{animation-duration:.01s!important}}
+/* ---- motion: results arrive in sequence (replays each time the screen shows), panels leave instead of vanishing ---- */
+#over .result{animation:cardin .3s var(--ease-out) both}
+#over .result > *{animation:rise .3s var(--ease-out) both;animation-delay:var(--d,0ms)}
+#over .result > #oTitle{animation:ribbondrop .42s var(--ease-back) .08s both}
+#over .result > #oScore{--d:60ms} #over .result > #oMedal{--d:200ms} #over .result > #oBestWrap{--d:240ms}
+#over .result > #oMsg{--d:280ms} #over .result > .stats{--d:320ms} #over .result > #oRew{--d:380ms} #over .result > #oZone{--d:420ms}
+#over .actions{animation:rise .3s var(--ease-out) .35s both}
+@keyframes cardin{from{opacity:0;transform:translateY(40px) scale(.94)}}
+#bRetry{animation:nudge 1.6s ease-in-out 1.4s 3}   /* three gentle pulses, then still */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+@keyframes ribbondrop{from{opacity:0;transform:translate(-50%,-26px) rotate(-5deg)}}
+@keyframes nudge{50%{scale:1.045}}
+.rewards{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.rewards:empty{display:none}
+.rew{display:inline-flex;align-items:center;gap:4px;font-family:var(--display);font-size:15px;background:#fff2c2;border:2px solid var(--ink);border-radius:12px;
+  padding:2px 10px 3px 5px;animation:popin .4s var(--ease-back) both;animation-delay:var(--rd,0ms)}
+.rew .ic{font-size:20px}
+.modal.out{animation:fadeout .17s forwards;pointer-events:none}
+.modal.out > .panel{animation:popout .17s ease-in forwards}
+@keyframes fadeout{to{opacity:0}}
+@keyframes popout{to{transform:scale(.88);opacity:0}}
+.pausep .setrow{padding:8px 12px;font-size:18px}
+@media (prefers-reduced-motion:reduce){.holdhint,.logo h1 span{animation:none}*{animation-duration:.01s!important;animation-iteration-count:1!important}}
 </style>
 
 <!-- icon set: one ink outline weight, drawn for this game -->
@@ -341,6 +373,7 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
         <div class="stat"><svg class="ic"><use href="#i-star"/></svg><b id="oPerf">0</b><span>Perfects</span></div>
         <div class="stat"><svg class="ic"><use href="#i-coin"/></svg><b id="oCoins">0</b><span>Coins</span></div>
       </div>
+      <div class="rewards" id="oRew"></div>
       <div class="zonebar" id="oZone"></div>
     </div>
     <div class="actions">
@@ -531,6 +564,15 @@ let parts=[], pops=[], zoneT=-9, pwKey="";
 let hitStop=0, pulse=0, fireT=0;   // freeze-frame on big hits, blob pulse on a great fit, on-fire trail timer
 let CH=null;                       // active friend challenge: {seed, target, gen}
 let jobs=[]; const after=(sec,fn)=>jobs.push({at:T+sec,fn});   // timers on the game clock, not the wall clock
+let worldV=0;                      // how fast the world scrolled this frame (result words ride along with it)
+let shownScore=0, rollRaf=0;       // the HUD score rolls up instead of jumping
+function rollScore(to){
+  cancelAnimationFrame(rollRaf); const el=$("score");
+  if(to===shownScore){el.textContent=to;return}
+  const from=shownScore, t0=performance.now(), ms=Math.min(260,80+Math.abs(to-from)*6);
+  const step=now=>{const k=Math.min(1,(now-t0)/ms);shownScore=Math.round(from+(to-from)*(1-(1-k)**3));el.textContent=shownScore;if(k<1)rollRaf=requestAnimationFrame(step)};
+  rollRaf=requestAnimationFrame(step);
+}
 let pressT=-9, pressDir=0;         // last press/release, for the instant visual response
 let DC=null;                       // active daily challenge: {day, num, seed}
 
@@ -555,7 +597,7 @@ function newRun(){
   R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],gems:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,smash:0,gemsGot:0,boxes:0,cont:false,doubled:false,first:S.runs===0&&!DC,t:0,daily:!!DC,log:[],
     zone:0,prevZone:0,nextBox:6,lastType:"",pw:{shield:false,slowUntil:0,dblUntil:0},seed,rng:mulberry(seed),prng:mulberry(seed^0x5eed),chWon:false,
     rh:[],row:0,bestRow:0,prevGreat:false,beatBest:false,missBy:0};   // prng: power-ups, so the same gates give the same boxes
-  blobR=Math.min(blobR,30); blobVis=1; parts=[]; pops=[]; sinceToggle=0; hitStop=0; pulse=0; jobs=[];
+  blobR=Math.min(blobR,30); blobVis=1; parts=[]; pops=[]; sinceToggle=0; hitStop=0; pulse=0; jobs=[]; shownScore=0; cancelAnimationFrame(rollRaf);
   spawnUntilTop(BY-310);
 }
 // Pace rises gate by gate in waves of ten: it builds for nine gates, then the gold gate (every 10th) is a breather.
@@ -644,7 +686,7 @@ function judge(g){
   if(g.type!=="glass"&&d>gap+tol){
     if(R.pw.shield){ // shield pops instead of the blob
       R.pw.shield=false;R.passed++;R.chain=0;R.row=0;R.prevGreat=false;blobR=Math.min(blobR,gap*.45);shake=6;g.broken=true;shatter(g);SFX.shield();buzz(30);hitStop=.06;
-      popup("SHIELD SAVED YOU!",LW/2,BY-blobR-30,C_GOOD,24);if(m0>1)fx("lost",{m:m0});updateHud(true);return}
+      popup("SHIELD SAVED YOU!",LW/2,Math.min(LH-44,BY+blobR+30),C_GOOD,22,true);if(m0>1)fx("lost",{m:m0});updateHud(true);return}
     R.missBy=Math.max(1,Math.ceil(d-(gap+tol)));
     crash(g);return}
   R.passed++;
@@ -672,11 +714,12 @@ function judge(g){
   R.score+=pts*mult*(dblOn()?2:1);
   if(great&&g.type!=="glass"){const c=g.gold?5:1;R.coins+=c;if(g.gold){R.gold++;label="GOLD! +5";SFX.coin()} else if(R.chain%3===0)SFX.coin();}
   g.res=label; g.resT=T;
-  popup(label,LW/2,BY-blobR-30,col,LABEL_SIZE[label]||(label.length>9?26:30));   // big wins loud, small results quiet
+  const below=Math.min(LH-44,BY+blobR+30);   // under the blob: result words never cover the next gap
+  popup(label,LW/2,below,col,LABEL_SIZE[label]||(label.length>9?26:30),true);   // big wins loud, small results quiet
   // twin snug: both gates of a twin pair fitted perfectly
-  if(g.twin&&great&&R.prevGreat){const b=6*mult;R.score+=b;if(R.glow<3)R.glow++;popup(`TWIN SNUG! +${b}`,LW/2,BY-blobR-140,C_GOLD,24);SFX.reward();buzz(20)}
+  if(g.twin&&great&&R.prevGreat){const b=6*mult;R.score+=b;if(R.glow<3)R.glow++;popup(`TWIN SNUG! +${b}`,LW/2,Math.min(LH-14,below+32),C_GOLD,22,true);SFX.reward();buzz(20)}
   R.prevGreat=great;
-  if(g.box){if(great)openBox(glow0);else popup("BOX MISSED",LW/2,BY-blobR-66,C_BAD,20)}
+  if(g.box){if(great)openBox(glow0);else popup("BOX MISSED",LW/2,Math.min(LH-14,below+30),C_BAD,18,true)}
   if(great)pulse=.3;
   chainFx(m0,c0);
   if(R.glow>glow0)fx("glow");
@@ -696,7 +739,7 @@ function openBox(glow0){
   const k=glow0<=1?"shield":R.chain>=6?"double":speed(R.passed)>=300?"slow":roll;
   R.boxes++;
   if(k==="shield")R.pw.shield=true; else if(k==="slow")R.pw.slowUntil=T+4; else R.pw.dblUntil=T+6;
-  popup(POWERS[k][0],LW/2,BY-blobR-70,C_GOLD,30);SFX.reward();confetti();
+  popup(POWERS[k][0],LW/2,Math.min(LH-14,BY+blobR+62),C_GOLD,24,true);SFX.reward();confetti();
 }
 function shatter(g){
   const half=g.cur/2;
@@ -724,7 +767,7 @@ function burst(g,n,big){const c=g.gold?C_GOLD:skin().c;
 function confetti(){const cols=["#ff6f91","#ffcf3a","#5fd34a","#3fb4f0","#8a6bff"];
   for(let i=0;i<46;i++)parts.push({x:rand(20,LW-20),y:rand(-20,40),vx:rand(-60,60),vy:rand(40,220),life:rand(1.2,2),max:2,c:cols[i%5],s:rand(4,7),g:180,conf:true,rot:rand(0,6),vr:rand(-10,10)})}
 function ring(r0){parts.push({ring:true,x:LW/2,y:BY,r:r0,life:.45,max:.45})}
-function popup(text,x,y,c,size){pops.push({text,x,y,c,size,life:1,age:0})}
+function popup(text,x,y,c,size,follow){pops.push({text,x,y,c,size,life:1,age:0,follow})}   // follow: rides down with the world instead of rising
 
 // ---------- loop ----------
 let last=performance.now();
@@ -738,7 +781,7 @@ function frame(now){
   music(); draw(); requestAnimationFrame(frame);
 }
 function update(dt){
-  wob+=dt*(holding?14:5); pulse=Math.max(0,pulse-dt*3);
+  wob+=dt*(holding?14:5); pulse=Math.max(0,pulse-dt*3); worldV=0;
   if(state==="play"){
     R.t+=dt;
     if(R.chain>=6){fireT-=dt;if(fireT<=0){fireT=.05;   // on-fire trail
@@ -754,7 +797,7 @@ function update(dt){
       // first-time mechanic: show a banner and slow down while it approaches
       const iG=R.gates.find(g=>g.intro&&!g.done&&g.y>BY-330), iM=R.gems.find(m=>m.intro&&!m.done&&m.y>BY-330), it=iG||iM;
       setIntro(it?it.intro:null);
-      const v=speed(R.passed)*(T<R.pw.slowUntil?.6:1)*(it?.55:1);
+      const v=speed(R.passed)*(T<R.pw.slowUntil?.6:1)*(it?.55:1); worldV=v;
       climb+=v*dt;
       for(const m of R.gems){m.y+=v*dt;
         if(!m.done&&m.y>=BY){m.done=true;if(m.intro){S.seen.gem=true;save()}
@@ -776,7 +819,7 @@ function update(dt){
   } else if(state==="dying"){humSet(true); if(R.end==="fade") blobVis=Math.max(0,blobVis-dt*1.4);}
   for(const p of parts){p.life-=dt;if(!p.ring){p.vy+=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.vr)p.rot+=p.vr*dt}else p.r+=260*dt}
   parts=parts.filter(p=>p.life>0); if(parts.length>260)parts.splice(0,parts.length-260);
-  for(const p of pops){p.life-=dt*0.9;p.age+=dt;p.y-=36*dt}
+  for(const p of pops){p.life-=dt*0.9;p.age+=dt;p.y+=p.follow?worldV*dt:-36*dt}
   pops=pops.filter(p=>p.life>0);
   const sp=state==="play"?speed(R.passed):18;
   for(const c of clouds){c.y+=sp*.22*c.z*dt;c.x+=6*c.z*dt;if(c.y>LH+80){c.y=-80;c.x=rand(-40,LW+40)}if(c.x>LW+90)c.x=-90}
@@ -864,7 +907,7 @@ function draw(){
       if(h){ctx.save();ctx.translate(LW/2,Math.min(LH-24,BY+blobR+36));const s=1+.06*Math.sin(T*9);ctx.scale(s,s);strokeText(h,0,0,22,"#ffffff",6);ctx.restore()}}}
   if(flash>0){ctx.fillStyle=`rgba(255,255,255,${flash*.3})`;ctx.fillRect(0,0,LW,LH)}
   if(T<freezeUntil&&state==="play")strokeText("READY?",LW/2,BY-160,44,C_GOLD,8);
-  if(paused){ctx.fillStyle="rgba(43,32,64,.55)";ctx.fillRect(0,0,LW,LH);strokeText("PAUSED",LW/2,LH/2-10,48,"#ffffff",8);strokeText("Hold to resume",LW/2,LH/2+36,20,"#ffffff",5)}
+  if(paused&&!document.querySelector(".pausep")){ctx.fillStyle="rgba(43,32,64,.55)";ctx.fillRect(0,0,LW,LH);strokeText("PAUSED",LW/2,LH/2-10,48,"#ffffff",8);strokeText("Tap to resume",LW/2,LH/2+36,20,"#ffffff",5)}
 }
 function starPath(c,r){c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rad=i%2?r*.45:r;c.lineTo(Math.cos(a)*rad,Math.sin(a)*rad)}c.closePath()}
 function drawGem(m){
@@ -1062,8 +1105,12 @@ function gameOver(){
   else $("oZone").innerHTML=`<span>You reached the final zone: <b>${THEMES[R.zone].name}</b>!</span>`;
   show("over"); overLock=performance.now()+700;
   if(isBest&&R.score>0&&prevBest>0){confetti();SFX.reward()}
-  done.forEach((m,i)=>setTimeout(()=>{toast(`Mission done! +${m.rw}`);SFX.reward()},400+i*600));
-  leveled.forEach((l,i)=>setTimeout(()=>toast(`Level ${l}! +20`,"star"),500+(done.length+i)*600));
+  // mission and level rewards land inside the panel, in sequence, instead of pop-ups over the banner
+  const mc=done.reduce((a,m)=>a+m.rw,0);
+  const rew=[...(done.length?[["coin",done.length>1?`Missions ×${done.length} +${mc}`:`Mission +${mc}`]]:[]),
+    ...(leveled.length?[["star",leveled.length>1?`Level ${leveled[leveled.length-1]} +${20*leveled.length}`:`Level ${leveled[0]} +20`]]:[])];   // at most two chips: one line
+  $("oRew").innerHTML=rew.map(([i,t],k)=>`<span class="rew" style="--rd:${650+k*220}ms">${ic(i)}${t}</span>`).join("");
+  rew.forEach((_,k)=>setTimeout(()=>SFX.reward(),650+k*220));
 }
 let overLock=0;
 function continueRun(){
@@ -1164,33 +1211,37 @@ function readChallenge(){
 function show(id){for(const k of["home","hud","over"])$(k).hidden=k!==id}
 let lastMult=1;
 function updateHud(bump){
-  if(!R)return; const s=$("score"); s.textContent=R.score;
+  if(!R)return; const s=$("score"); rollScore(R.score);
   if(bump){s.classList.remove("pop");void s.offsetWidth;s.classList.add("pop")}
   const sc=skin().c;
   [...$("pips").children].forEach((p,i)=>{p.classList.toggle("off",i>=R.glow);p.style.color=sc});
   $("hCoinRun").textContent=R.coins;
   const ch=$("chal");ch.hidden=!CH;if(CH){ch.classList.toggle("won",R.chWon);ch.innerHTML=`${ic(R.chWon?"check":"trophy")}${CH.target}`}
-  const m=1+Math.min(4,Math.floor(R.chain/3)); $("mult").textContent=m>1?`×${m}`:"";
+  const m=1+Math.min(4,Math.floor(R.chain/3)); $("mult").textContent=m>1?`×${m}`:""; $("mult").dataset.m=m;
+  s.classList.toggle("target",!!CH); if(CH){s.style.setProperty("--cp",Math.min(1,R.score/(CH.target+1)).toFixed(3));s.classList.toggle("won",R.chWon)}
   if(bump&&m!==lastMult&&m>1){$("mult").style.transform="rotate(6deg) scale(1.5)";setTimeout(()=>$("mult").style.transform="",160)} lastMult=m;
 }
 function setIntro(k){const el=$("intro");
   if(!k){if(!el.hidden)el.hidden=true;return}
   if(el.hidden||el.dataset.k!==k){el.dataset.k=k;$("introT").textContent=INTROS[k][0];$("introS").textContent=INTROS[k][1];el.hidden=false;SFX.ui()}}
-function renderPw(){if(!R)return;const c=[];
-  if(R.pw.shield)c.push(`<span class="pwchip">${ic("shield")}</span>`);
-  if(T<R.pw.slowUntil)c.push(`<span class="pwchip">${ic("slow")}${Math.ceil(R.pw.slowUntil-T)}</span>`);
-  if(T<R.pw.dblUntil)c.push(`<span class="pwchip">${ic("x2")}${Math.ceil(R.pw.dblUntil-T)}</span>`);
-  const k=c.join("");if(k!==pwKey){pwKey=k;$("pw").innerHTML=k}}
+function renderPw(){if(!R)return;const act=[];
+  if(R.pw.shield)act.push(["shield","shield",1]);
+  if(T<R.pw.slowUntil)act.push(["slow","slow",(R.pw.slowUntil-T)/4]);   // slow-mo lasts 4 s
+  if(T<R.pw.dblUntil)act.push(["dbl","x2",(R.pw.dblUntil-T)/6]);        // double points lasts 6 s
+  const k=act.map(a=>a[0]).join();
+  if(k!==pwKey){pwKey=k;$("pw").innerHTML=act.map(a=>`<span class="pwchip" data-k="${a[0]}">${ic(a[1])}</span>`).join("")}
+  const els=$("pw").children; act.forEach((a,i)=>{if(els[i])els[i].style.setProperty("--p",clamp(a[2],0,1).toFixed(3))})}
 function toast(t,icon="coin"){const box=$("toasts");while(box.children.length>=2)box.firstChild.remove();   // never more than two on screen
   const d=document.createElement("div");d.className="toast";d.innerHTML=`${ic(icon)}${t}`;box.appendChild(d);setTimeout(()=>d.remove(),2700)}
 
 // ---------- panels ----------
+function closePanel(m){if(!m||m.classList.contains("out"))return;m.classList.add("out");setTimeout(()=>m.remove(),170)}
 function panel(title,color,body,{close=true,cls=""}={}){
   const m=document.createElement("div");m.className="modal";
   m.innerHTML=`<div class="panel ${cls}"><div class="ribbon" style="--rc:${color}">${title}</div>${close?`<button class="rbtn small pink xbtn" data-x aria-label="Close">${ic("x")}</button>`:""}${body}</div>`;
   $("stage").appendChild(m);
-  m.addEventListener("pointerdown",e=>{e.stopPropagation();if(close&&e.target===m){SFX.ui();m.remove()}});
-  const x=m.querySelector("[data-x]");if(x)x.onclick=()=>{SFX.ui();m.remove()};
+  m.addEventListener("pointerdown",e=>{e.stopPropagation();if(close&&e.target===m){SFX.ui();closePanel(m)}});
+  const x=m.querySelector("[data-x]");if(x)x.onclick=()=>{SFX.ui();closePanel(m)};
   return m;
 }
 function reviveModal(){
@@ -1357,21 +1408,40 @@ function isUI(t){return t.closest&&t.closest("button,.panel,.modal,.adfake")}
 stage.addEventListener("pointerdown",e=>{
   if(isUI(e.target))return;
   e.preventDefault(); audio();
-  if(paused){paused=false;last=performance.now()}
+  if(paused){resumeRun();return}
   if(state==="home"){startRun();holding=true;return}
   if(state==="over"){if(performance.now()<overLock)return;startRun();holding=true;return}
   if(state==="play")holding=true;
 });
 const release=()=>{holding=false};
 window.addEventListener("pointerup",release);window.addEventListener("pointercancel",release);
-window.addEventListener("keydown",e=>{if(e.code==="Space"&&!e.repeat){e.preventDefault();audio();if(state==="home"||(state==="over"&&performance.now()>overLock)){startRun()}if(paused)paused=false;holding=true}});
+window.addEventListener("keydown",e=>{if(e.code==="Space"&&!e.repeat){e.preventDefault();audio();if(state==="home"||(state==="over"&&performance.now()>overLock)){startRun()}if(paused){resumeRun();return}holding=true}});
 window.addEventListener("keyup",e=>{if(e.code==="Space")holding=false});
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){if(state==="play"){paused=true;holding=false}if(AC)AC.suspend()}
-  else if(AC)AC.resume();
+  else{if(AC)AC.resume();if(paused&&state==="play")pauseMenu()}   // coming back to the app: the pause menu is waiting
 });
 stage.addEventListener("contextmenu",e=>e.preventDefault());
-$("bPause").onclick=()=>{if(state==="play"&&!paused){paused=true;holding=false;humSet(true)}};
+$("bPause").onclick=()=>{if(state==="play"&&!paused){paused=true;holding=false;humSet(true);pauseMenu()}};
+function resumeRun(){
+  const pm=document.querySelector(".pausep");if(pm)closePanel(pm.closest(".modal"));
+  if(!paused)return; paused=false; holding=false; last=performance.now();
+  if(state==="play")freezeUntil=T+.9;   // READY? before the gates move again
+}
+function pauseMenu(){
+  if(state!=="play"||!paused||document.querySelector(".pausep"))return;
+  const m=panel("PAUSED","var(--blue)",`
+    <button class="btn wide" data-r>${ic("play")}RESUME</button>
+    <div class="setrow">${ic("music")}<span>Music</span><button class="sw" data-sw="music" aria-pressed="${S.music}" aria-label="Music"></button></div>
+    <div class="setrow">${ic("sound")}<span>Sounds</span><button class="sw" data-sw="sound" aria-pressed="${S.sound}" aria-label="Sounds"></button></div>
+    <button class="textbtn" data-q>${R&&R.daily?"End run (uses today's try)":"Quit to home"}</button>`,{close:false,cls:"pausep"});
+  m.querySelector("[data-r]").onclick=e=>{e.stopPropagation();SFX.ui();resumeRun()};
+  m.querySelectorAll("[data-sw]").forEach(b=>b.onclick=e=>{e.stopPropagation();const k=b.dataset.sw;S[k]=!S[k];b.setAttribute("aria-pressed",S[k]);
+    audio();if(k==="sound"&&sfxBus)sfxBus.gain.value=S.sound?1:0;SFX.ui();save()});
+  m.querySelector("[data-q]").onclick=e=>{e.stopPropagation();SFX.ui();closePanel(m);paused=false;holding=false;
+    if(R&&R.daily){R.end="fade";R.log.push("F");gameOver()}   // the daily try counts, so quitting can't dodge a bad run
+    else goHome()};
+}
 $("bShare").onclick=()=>{SFX.ui();parentGate(R&&R.daily?shareDaily:shareChallenge)};
 $("bDC").onclick=()=>{SFX.ui();dcPanel()};
 
@@ -1384,7 +1454,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="12";
+const BUILD="13";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{

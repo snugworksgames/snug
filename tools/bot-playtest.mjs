@@ -37,8 +37,21 @@ const base = `http://localhost:${server.address().port}/`;
 
 const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
 const errors = [];
+const failures0 = [];
+{
+  const src = readFileSync(join(root, "web", "snug.html"), "utf8");
+  const js = src.slice(src.indexOf("<script>"), src.lastIndexOf("</script>"));
+  const hidden = [];
+  js.split("\n").forEach((line, i) => {
+    const m = line.match(/(^|[^:"'`\\])\/\/(.*)$/); if (!m) return;
+    const c = m[2];
+    if (/[A-Za-z_$][\w$.\[\]]*\s*=(?!=)[^;]*;/.test(c) || /\b[A-Za-z_$][\w$]*\([^)]*\)\s*;/.test(c)) hidden.push(`line ${i + 1}: ${c.trim().slice(0, 60)}`);
+  });
+  if (hidden.length) failures0.push(`code hidden after a // comment (${hidden.join(" | ")})`);
+}
 const failures = [];
 const check = (ok, what) => { console.log(`${ok ? "PASS" : "FAIL"}  ${what}`); if (!ok) failures.push(what); };
+check(failures0.length === 0, failures0[0] || "no code hidden after a // comment");
 const shot = async (page, name) => { if (shots) await page.screenshot({ path: join(shots, name + ".png") }); };
 
 async function open(browser, url, save) {
@@ -132,6 +145,8 @@ await shot(page, "results");
 const res = await page.evaluate(() => ({ score: +document.getElementById("oScore").textContent, real: window.__g().R.score, seed: window.__g().R.seed,
   medal: document.getElementById("oMedal").textContent, share: !document.getElementById("bShare").hidden }));
 check(res.score === res.real && res.real > 0, `results show the final score after the count-up (${res.real})`);
+check(await page.evaluate(() => ![...document.querySelectorAll(".toast")].some((t) => /Mission|Level/.test(t.textContent))),
+  `mission and level rewards sit inside the results panel, not over the banner (${await page.evaluate(() => document.querySelectorAll("#oRew .rew").length)} shown)`);
 check(/MEDAL/.test(res.medal), `a medal is shown (${res.medal.trim()})`);
 // Sharing sits behind a parental gate: a wrong answer shares nothing, the right one goes through.
 await page.click("#bShare"); await page.waitForTimeout(400);
@@ -168,12 +183,19 @@ if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link")
 }
 
 // 3. Pause
-await page.click("#bRetry"); await page.waitForTimeout(600);
+await page.click("#bRetry", { force: true }); await page.waitForTimeout(600);
 await page.click("#bPause"); await page.waitForTimeout(300);
 const y1 = await page.evaluate(() => window.__g().R.gates[0].y); await page.waitForTimeout(500);
 const y2 = await page.evaluate(() => window.__g().R.gates[0].y);
 check(y1 === y2, "pause button freezes the run");
 await shot(page, "paused");
+check(await page.locator(".pausep [data-r]").isVisible(), "pause opens a menu with RESUME");
+check(await page.evaluate(() => +document.getElementById("score").textContent === window.__g().R.score), "the HUD score rolls to the real score");
+await page.click(".pausep [data-r]"); await page.waitForTimeout(250);
+const r1 = await page.evaluate(() => window.__g().R.gates[0].y); await page.waitForTimeout(350);
+const r2 = await page.evaluate(() => window.__g().R.gates[0].y); await page.waitForTimeout(700);
+const r3 = await page.evaluate(() => window.__g().R.gates[0].y);
+check(r1 === r2 && r3 > r2, "resume shows READY? before the gates move again");
 
 // 3b. A Good costs one multiplier step, not the whole chain
 const mg = await open(browser, base, rich);
@@ -205,6 +227,7 @@ await shot(a, "challenge-card");
 await a.click("[data-go]"); await a.waitForTimeout(300);
 await startByTap(a);
 check(await a.evaluate(() => window.__g().R.seed) === seed, "the run uses the seed from the link");
+check(await a.evaluate(() => document.getElementById("score").classList.contains("target")), "a challenge run shows progress toward the target under the score");
 const peakA = await play(a, 25000);
 await finish(a);
 // second player: a brand-new one (first-run pacing and intro banners must not change the layout)
