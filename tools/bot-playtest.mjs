@@ -133,6 +133,8 @@ const rich = { best: 40, coins: 2000, xp: 10, level: 3, skins: ["peach", "mint"]
 page = await open(browser, base, rich);
 await page.click("#bSkins"); await page.waitForTimeout(400);
 await shot(page, "collection");
+check(/Available in the Android app/.test(await page.locator(".plus").textContent()) && !(await page.locator(".plus [data-buy]").count()),
+  "the web version shows Snug Plus without a buy button (it's in the Android app)");
 await page.click('[data-hat="crown"]'); await page.waitForTimeout(300);
 let st = await page.evaluate(() => window.__g().S);
 check(st.hat === "crown" && st.hats.includes("crown") && st.coins === 1400, "buying the crown costs 600 coins and equips it");
@@ -183,7 +185,36 @@ if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link")
   const fx = await cr.evaluate(() => ({ squish: window.__g().squish, flash: window.__g().flash }));
   check(hit.end === "crash" && hit.squish > 0 && fx.squish === 0 && fx.flash === 0,
     `crash squash and squeeze flash wear off (${hit.end}: squish ${hit.squish.toFixed(2)} -> ${fx.squish}, flash ${fx.flash})`);
+  if (await cr.locator("#rvNo").isVisible()) { await cr.click("#rvNo"); await cr.waitForTimeout(400); }
+  await cr.waitForFunction(() => window.__g().state === "over"); await cr.waitForTimeout(800);
+  await cr.click("#bHome", { force: true }); await cr.waitForTimeout(300); await cr.click("#bSet"); await cr.waitForTimeout(300);
+  for (let i = 0; i < 5; i++) { await cr.click(".note"); await cr.waitForTimeout(60); }
+  await cr.waitForTimeout(300);
+  const stats = (await cr.locator(".stattext").textContent().catch(() => "")) || "";
+  check(/runs 1\b/.test(stats) && /crash 1/.test(stats), `the hidden tester screen counts the run (${stats.match(/runs \d+/)?.[0] || "not found"})`);
   await cr.context().close();
+}
+
+// 2c. Store: Snug Plus through the parental gate (simulated Google Play), Golden, and a refund taking it back
+{
+  const st = await open(browser, `${base}?iap=sim`, { ...rich, sessions: 4 });
+  await st.click("#bSkins"); await st.waitForTimeout(500);
+  check(await st.locator(".plus [data-buy='plus']").isVisible(), "the app's store shows Snug Plus");
+  const price = (await st.locator(".plus [data-price='snug_plus']").textContent()) || "";
+  await st.click(".plus [data-buy='plus']"); await st.waitForTimeout(300);
+  check(await st.locator(".gateq").isVisible(), "buying asks a grown-up first");
+  const ans = await st.evaluate(() => { const [a, b] = document.querySelector(".gateq").textContent.match(/\d+/g).map(Number); return a * b; });
+  await st.click(`.gate [data-a="${ans}"]`); await st.waitForTimeout(900);
+  const s1 = await st.evaluate(() => ({ plus: window.__g().S.plus, noAds: window.__g().S.noAds }));
+  check(s1.plus && s1.noAds && /\d/.test(price), `buying Snug Plus unlocks it and removes ads (${price})`);
+  await st.click("#bSkins"); await st.waitForTimeout(400);
+  await st.click('[data-skin="golden"]'); await st.waitForTimeout(300);
+  check(await st.evaluate(() => window.__g().S.skin === "golden"), "Plus owners can wear the Golden blob");
+  await st.evaluate(() => localStorage.removeItem("snug.iapsim"));   // refunded: Google Play no longer lists it
+  await st.reload(); await st.waitForTimeout(900);
+  const s2 = await st.evaluate(() => ({ plus: window.__g().S.plus, skin: window.__g().S.skin }));
+  check(!s2.plus && s2.skin === "peach", "a refund takes Plus and Golden away again");
+  await st.context().close();
 }
 
 // 3. Pause

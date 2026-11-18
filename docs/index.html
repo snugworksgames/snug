@@ -308,6 +308,17 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 @keyframes fadeout{to{opacity:0}}
 @keyframes popout{to{transform:scale(.88);opacity:0}}
 .pausep .setrow{padding:8px 12px;font-size:18px}
+/* store card and tester stats */
+.plus{display:grid;grid-template-columns:64px 1fr;gap:8px 12px;align-items:center;text-align:left;background:linear-gradient(#fff7d6,#ffe7a1);
+  border:3px solid var(--ink);border-radius:18px;padding:12px}
+.plus .plusblob{position:static;width:64px;height:64px}
+.plus b{font-family:var(--display);font-weight:400;font-size:22px;display:block;line-height:1.1}
+.plus ul{margin:4px 0 0;padding-left:18px;font-weight:900;font-size:14px;line-height:1.4}
+.plus > .btn,.plus > .textbtn,.plus > .msg{grid-column:1/-1}
+.plus .btn .price{font-family:var(--body);font-size:16px;font-weight:900}
+.plus.owned{grid-template-columns:auto 1fr} .plus.owned > .ic{font-size:30px} .plus.owned span{font-weight:800;font-size:14px}
+.textbtn.small{font-size:15px;padding:0}
+.stattext{display:grid;gap:7px;text-align:left;font-weight:800;font-size:14px;line-height:1.35}
 @media (prefers-reduced-motion:reduce){.holdhint,.logo h1 span{animation:none}*{animation-duration:.01s!important;animation-iteration-count:1!important}}
 </style>
 
@@ -436,6 +447,14 @@ const INK="#2b2040";
 // the one revive per run is free. "?ads=sim" shows placeholder ads for testing the flow.
 const ADS=window.SNUG_ADS||(/[?&]ads=sim/.test(location.search)?"sim":null);
 const LIVE=location.protocol==="https:"&&!/claude|anthropic/.test(location.hostname); // a real hosted copy, not a preview
+// In-app purchases: the store app sets window.SNUG_IAP = {products(ids), buy(id), owned()}. The web version has no store.
+// "?iap=sim" simulates Google Play to test the flow (purchases are remembered in this browser only).
+const PRODUCTS={plus:"snug_plus",noads:"snug_remove_ads"};
+const IAP=window.SNUG_IAP||(/[?&]iap=sim/.test(location.search)?simIAP():null);
+function simIAP(){const K="snug.iapsim",get=()=>{try{return JSON.parse(localStorage.getItem(K)||"[]")}catch(e){return[]}};
+  return{products:()=>Promise.resolve({snug_plus:{price:"₹129"},snug_remove_ads:{price:"₹79"}}),
+    buy:id=>new Promise(r=>setTimeout(()=>{const o=get();if(!o.includes(id))o.push(id);try{localStorage.setItem(K,JSON.stringify(o))}catch(e){}r("ok")},300)),
+    owned:()=>Promise.resolve(get())}}
 
 // ---------- content tables (ids kept stable for saved progress) ----------
 const SKINS=[
@@ -445,7 +464,8 @@ const SKINS=[
  {id:"lemon",name:"Lemon",c:"#ffe04d",d:"#d9aa12",cost:450},
  {id:"sky",name:"Berry",c:"#5cc6ff",d:"#2386cc",cost:600},
  {id:"ruby",name:"Cherry",c:"#ff5d7d",d:"#c92e52",cost:800},
- {id:"aurora",name:"Rainbow",c:"#9ff5e6",d:"#8a6cff",cost:-1,note:"Day 7 gift"}
+ {id:"aurora",name:"Rainbow",c:"#9ff5e6",d:"#8a6cff",cost:-1,note:"Day 7 gift"},
+ {id:"golden",name:"Golden",c:"#ffcf3a",d:"#d99a12",cost:-2,note:"Snug Plus"}
 ];
 const THEMES=[
  {id:"pond",name:"Meadow",lvl:1,top:"#4fbdf0",bot:"#c9f1ff",far:"#9be0a0",near:"#62c46e",gate:"#ff8fb1",gateD:"#d65b86",cloud:"#ffffff",sun:"#ffe26b"},
@@ -482,12 +502,18 @@ const MEDALS=[["BRONZE",80,"#e0965a"],["SILVER",220,"#d3dbe6"],["GOLD",450,"#ffc
 
 // ---------- save ----------
 const DEF={best:0,coins:0,xp:0,level:1,skins:["peach"],skin:"peach",hats:["none"],hat:"none",theme:"pond",streak:0,lastDay:null,
-  mDay:null,missions:[],runs:0,sessions:0,sound:true,music:true,haptics:true,seen:{},zone:0,dc:null,dcStreak:0,dcLast:null,dcBest:0};
+  mDay:null,missions:[],runs:0,sessions:0,sound:true,music:true,haptics:true,seen:{},zone:0,dc:null,dcStreak:0,dcLast:null,dcBest:0,
+  plus:false,noAds:false,offerDay:null,adsDay:null,adsToday:0};
 const fresh=()=>JSON.parse(JSON.stringify(DEF)); // deep copy, so a reset never inherits earlier purchases
 let S=fresh();
 try{const raw=localStorage.getItem("snug.v1");if(raw)S=Object.assign(fresh(),JSON.parse(raw))}catch(e){}
 if(!S.seen)S.seen={};
 const save=()=>{try{localStorage.setItem("snug.v1",JSON.stringify(S))}catch(e){}};
+// Play statistics, counted on this device only, for testers and tuning. Nothing is sent anywhere: the hidden
+// tester screen (Settings, tap the version line 5 times) shows them and can copy them as text.
+const ST=(()=>{let o={};try{o=JSON.parse(localStorage.getItem("snug.stats")||"{}")}catch(e){}return Object.assign({v:1,install:todayKey(),days:{},ev:{},runs:[],firstRun:null},o)})();
+const stSave=()=>{try{localStorage.setItem("snug.stats",JSON.stringify(ST))}catch(e){}};
+function track(name,n=1){ST.ev[name]=(ST.ev[name]||0)+n;stSave()}
 S.sessions++;
 
 // ---------- audio & haptics ----------
@@ -584,6 +610,8 @@ const rateNow=h=>(h?GROW:SHRINK)*(MINF+(1-MINF)*Math.min(1,sinceToggle/RAMP));
 const GRACE=0.017;  // s (one frame): a last-instant overshoot is forgiven if the blob fitted a frame earlier. Longer windows make runs 2-4x longer.
 const theme=()=>THEMES[R?R.zone:0]; // the sky follows the zone you've climbed to
 const skin=()=>SKINS.find(s=>s.id===S.skin)||SKINS[0];
+const ownsSkin=s=>S.skins.includes(s.id)||(S.plus&&s.id!=="aurora");   // Plus: every skin except the 7-day streak gift
+const ownsHat=h=>S.hats.includes(h.id)||S.plus;
 
 // ---------- state ----------
 let state="home", T=0, holding=false, paused=false;
@@ -1008,6 +1036,7 @@ function paintBlob(c,r,s,o={}){
   c.save();c.scale(sx,sy);
   let fill=s.c;
   if(s.id==="aurora"){const g=c.createLinearGradient(-r,-r,r,r);g.addColorStop(0,"#ff8fb1");g.addColorStop(.35,"#ffe04d");g.addColorStop(.65,"#6fe3b4");g.addColorStop(1,"#8a6bff");fill=g}
+  else if(s.id==="golden"){const g=c.createLinearGradient(-r,-r,r,r);g.addColorStop(0,"#fff3b0");g.addColorStop(.45,"#ffcf3a");g.addColorStop(1,"#e0960f");fill=g}
   c.beginPath();c.arc(0,0,r,0,7);c.fillStyle=fill;c.fill();
   c.save();c.beginPath();c.arc(0,0,r,0,7);c.clip();
   c.fillStyle=s.d;c.globalAlpha=s.id==="aurora"?.35:.9;c.beginPath();c.arc(r*.18,r*.32,r*1.02,0,7);c.arc(0,-r*.12,r*1.04,0,7,true);c.fill("evenodd");c.globalAlpha=1; // under-shade
@@ -1105,6 +1134,8 @@ function countUp(el,to){
 function gameOver(){
   setIntro(null);
   state="over"; S.runs++; runsSinceInter++; blobVis=1;
+  ST.runs.push([R.score,R.passed,Math.round(R.t),R.end==="crash"?"c":"f",R.daily?1:0]); if(ST.runs.length>200)ST.runs.shift();
+  if(ST.firstRun==null)ST.firstRun=R.passed; track("run_end");
   const isBest=R.score>S.best, prevBest=S.best; if(isBest)S.best=R.score;
   S.coins+=R.coins;
   const done=trackMissions(R);
@@ -1136,6 +1167,8 @@ function gameOver(){
   else $("oZone").innerHTML=`<span>You reached the final zone: <b>${THEMES[R.zone].name}</b>!</span>`;
   show("over"); overLock=performance.now()+700;
   if(isBest&&R.score>0&&prevBest>0){confetti();SFX.reward()}
+  if(IAP&&ADS&&!S.noAds&&S.sessions>1&&S.adsDay===todayKey()&&S.adsToday>=3&&S.offerDay!==todayKey())
+    setTimeout(()=>{if(state==="over")plusOffer("ads")},1400);
   // mission and level rewards land inside the panel, in sequence, instead of pop-ups over the banner
   const mc=done.reduce((a,m)=>a+m.rw,0);
   const rew=[...(done.length?[["coin",done.length>1?`Missions ×${done.length} +${mc}`:`Mission +${mc}`]]:[]),
@@ -1145,7 +1178,7 @@ function gameOver(){
 }
 let overLock=0;
 function continueRun(){
-  R.cont=true; R.glow=3; R.chain=0; R.row=0; R.rh=[]; blobR=30; blobVis=1; sinceToggle=0;
+  R.cont=true; R.glow=3; R.chain=0; R.row=0; R.rh=[]; blobR=30; blobVis=1; sinceToggle=0; track("revive_taken");
   R.gates=R.gates.filter(g=>g.y<BY-260);R.gems=R.gems.filter(m=>m.y<BY-260);
   if(!R.gates.length)makeGate(BY-300);
   state="play"; freezeUntil=T+1.1; show("hud"); updateHud();
@@ -1163,7 +1196,7 @@ function dcRecord(r){
     const y=new Date(day+"T12:00");y.setDate(y.getDate()-1);
     S.dcStreak=S.dcLast===todayKey(y)?(S.dcStreak||0)+1:1; S.dcLast=day;
     S.dc={day,num,score:r.score,gates:r.passed,perfects:r.perfects,log:r.log.join("")};
-    S.dcBest=Math.max(S.dcBest||0,r.score); save();
+    S.dcBest=Math.max(S.dcBest||0,r.score); save(); track("daily_done");
   }
   renderDC();
   return {num,streak:S.dcStreak};
@@ -1173,7 +1206,7 @@ function dcShareText(){
   return `Snug Daily #${d.num} · ${d.score} points · ${d.gates} gates\n${dcGrid([...d.log])}${S.dcStreak>1?`\n${S.dcStreak}-day streak`:""}`;
 }
 function shareDaily(){
-  if(!dcPlayed())return;
+  if(!dcPlayed())return; track("share_daily");
   const url=(window.SNUG_SHARE_BASE||location.href.split(/[?#]/)[0])+"?daily";
   const text=dcShareText()+"\nCan you beat me? Same gates for everyone today:";
   const fallback=()=>panel("SHARE","var(--purple)",`<div class="msg">Copy this and send it to a friend:</div><div class="linkbox">${text.replace(/\n/g,"<br>")}<br>${url}</div>`);
@@ -1222,6 +1255,7 @@ function parentGate(onPass){
 
 // ---------- challenge a friend: a link that carries this run's seed and score ----------
 function shareChallenge(){
+  track("share_challenge");
   const url=(window.SNUG_SHARE_BASE||location.href.split(/[?#]/)[0])+`?c=${R.seed}-${R.score}-g${GEN}`;   // the store app links to the public web game
   const text=`I scored ${R.score} in Snug! You get the exact same gates. Can you beat me?`;
   const fallback=()=>{const m=panel("CHALLENGE","var(--purple)",`<div class="msg">Copy this link and send it to a friend:</div><div class="linkbox">${url}</div>`);return m};
@@ -1276,6 +1310,7 @@ function panel(title,color,body,{close=true,cls=""}={}){
   return m;
 }
 function reviveModal(){
+  track("revive_offer");
   const m=panel("KEEP GOING?","var(--purple)",`
     <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="#fff" stroke="#2b2040" stroke-width="6"/>
       <circle id="rvArc" cx="60" cy="60" r="44" fill="none" stroke="#8a6bff" stroke-width="12" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><b id="rvN">4</b></div>
@@ -1295,6 +1330,7 @@ function reviveModal(){
 function showAd(kind,onDone){
   const isReward=kind!=="interstitial";
   if(!ADS){onDone&&onDone(true);return}
+  track(isReward?"ad_rewarded":"ad_interstitial");
   if(ADS.show){holding=false;ADS.show(kind,ok=>{if(isReward&&ok)lastRewardedAt=performance.now();if(!isReward||ok)onDone&&onDone(true);else if(state==="ad")gameOver()});return}
   const d=document.createElement("div");d.className="adfake";
   let left=isReward?3:2;
@@ -1307,7 +1343,8 @@ function showAd(kind,onDone){
 // Policy: never in first session, never before run 6, at most every 4th run, 150s+ into the session, and not within 90s of a rewarded ad.
 function maybeInterstitial(){
   const sess=(performance.now()-sessionStart)/1000;
-  if(ADS&&S.sessions>1&&S.runs>=6&&runsSinceInter>=4&&sess>150&&performance.now()-lastRewardedAt>90000){
+  if(ADS&&!S.noAds&&!S.plus&&S.sessions>1&&S.runs>=6&&runsSinceInter>=4&&sess>150&&performance.now()-lastRewardedAt>90000){
+    const td=todayKey(); if(S.adsDay!==td){S.adsDay=td;S.adsToday=0} S.adsToday++; save();
     runsSinceInter=0; showAd("interstitial",()=>{newRun();state="play";show("hud");updateHud()}); return true;}
   return false;
 }
@@ -1391,32 +1428,105 @@ function previewWorld(cv,t,hidden){const d=Math.min(window.devicePixelRatio||1,2
 function skinsPanel(scrollTo=0){
   const m=panel("COLLECTION","var(--pink)",`<div class="scroll">
    <div class="sect"><span>Blobs</span><span class="pill">${ic("coin")}${S.coins}</span></div>
-   <div class="grid">${SKINS.map(s=>{const own=S.skins.includes(s.id),sel=S.skin===s.id;
+   <div class="grid">${SKINS.map(s=>{const own=ownsSkin(s),sel=S.skin===s.id;
      return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-skin="${s.id}"><canvas></canvas>${s.name}
        ${own?`<span class="state">${sel?"Equipped":"Equip"}</span>`:s.cost<0?`<span class="state">${s.note}</span>`:`<span class="price">${ic("coin")}${s.cost}</span>`}</button>`}).join("")}</div>
    <div class="sect"><span>Hats</span></div>
-   <div class="grid">${HATS.map(h=>{const own=S.hats.includes(h.id),sel=S.hat===h.id;
+   <div class="grid">${HATS.map(h=>{const own=ownsHat(h),sel=S.hat===h.id;
      return `<button class="tile ${sel?"sel":""} ${own?"":"locked"}" data-hat="${h.id}"><canvas></canvas>${h.name}
        ${own?`<span class="state">${sel?"Wearing":"Wear"}</span>`:`<span class="price">${ic("coin")}${h.cost}</span>`}</button>`}).join("")}</div>
    <div class="sect"><span>Zones discovered</span><span class="pill">${(S.zone||0)+1}/${THEMES.length}</span></div>
    <div class="grid">${THEMES.map((t,i)=>{const own=(S.zone||0)>=i;
      return `<div class="tile ${own?"":"locked"}" data-theme="${t.id}"><canvas></canvas>${own?t.name:"???"}
-       <span class="state">${own?(i?`Gate ${ZONE_AT[i]}`:"Start"):`${ic("lock")} Gate ${ZONE_AT[i]}`}</span></div>`}).join("")}</div></div>`);
+       <span class="state">${own?(i?`Gate ${ZONE_AT[i]}`:"Start"):`${ic("lock")} Gate ${ZONE_AT[i]}`}</span></div>`}).join("")}</div>
+   <div class="sect"><span>Snug Plus</span></div>
+   ${storeCard()}</div>`);
+  track("collection_view"); wireStore(m,"collection");
   m.querySelectorAll("[data-skin] canvas").forEach(c=>previewBlob(c,SKINS.find(s=>s.id===c.parentElement.dataset.skin)));
   m.querySelectorAll("[data-theme] canvas").forEach((c,i)=>previewWorld(c,THEMES[i],(S.zone||0)<i));
   m.querySelectorAll("[data-hat] canvas").forEach(c=>previewBlob(c,skin(),c.parentElement.dataset.hat));
   const sc=m.querySelector(".scroll");sc.scrollTop=scrollTo;
   const reopen=()=>{save();renderHome();const at=sc.scrollTop;m.remove();const n=skinsPanel(at);n.querySelector(".panel").style.animation="none";n.style.animation="none"};
   m.querySelectorAll("[data-skin]").forEach(b=>b.onclick=()=>{const s=SKINS.find(x=>x.id===b.dataset.skin);
-    if(S.skins.includes(s.id)){S.skin=s.id;SFX.ui()}else if(s.cost>0&&S.coins>=s.cost){S.coins-=s.cost;S.skins.push(s.id);S.skin=s.id;SFX.reward();toast(`${s.name} unlocked!`,"blob")}
-    else{SFX.loose();toast(s.cost<0?"Reach a 7-day streak":`Need ${s.cost-S.coins} more coins`);return}
+    if(ownsSkin(s)){S.skin=s.id;SFX.ui()}else if(s.cost>0&&S.coins>=s.cost){S.coins-=s.cost;S.skins.push(s.id);S.skin=s.id;SFX.reward();toast(`${s.name} unlocked!`,"blob")}
+    else if(s.id==="golden"){SFX.ui();if(IAP)plusOffer("golden");else toast("Golden comes with Snug Plus in the Android app","blob");return}
+    else{SFX.loose();toast(s.cost<0?"Reach a 7-day streak":`Need ${s.cost-S.coins} more coins`);lockedOffer();return}
     reopen()});
   m.querySelectorAll("[data-hat]").forEach(b=>b.onclick=()=>{const h=HATS.find(x=>x.id===b.dataset.hat);
-    if(S.hats.includes(h.id)){S.hat=h.id;SFX.ui()}else if(S.coins>=h.cost){S.coins-=h.cost;S.hats.push(h.id);S.hat=h.id;SFX.reward();toast(`${h.name} unlocked!`,"blob")}
-    else{SFX.loose();toast(`Need ${h.cost-S.coins} more coins`);return}
+    if(ownsHat(h)){S.hat=h.id;SFX.ui()}else if(S.coins>=h.cost){S.coins-=h.cost;S.hats.push(h.id);S.hat=h.id;SFX.reward();toast(`${h.name} unlocked!`,"blob")}
+    else{SFX.loose();toast(`Need ${h.cost-S.coins} more coins`);lockedOffer();return}
     reopen()});
   return m;
 
+}
+// ---------- store: Snug Plus and Remove Ads, one-time purchases through Google Play ----------
+// Fair by design: cosmetics and comfort only, never score or gameplay. Every purchase sits behind the parental gate,
+// offers never interrupt a run, and Google Play is the source of truth (a refund takes the perks away again).
+function storeCard(){
+  if(S.plus)return `<div class="plus owned">${ic("check")}<div><b>Snug Plus</b><span>Thank you! No ads between runs, every skin and hat, and Golden.</span></div></div>`;
+  return `<div class="plus"><canvas class="plusblob"></canvas><div><b>Snug Plus</b>
+      <ul><li>No ads between runs</li><li>Every skin and hat</li><li>The Golden blob</li></ul></div>
+    ${IAP?`<button class="btn wide" data-buy="plus">${ic("star")}GET PLUS <span class="price" data-price="${PRODUCTS.plus}"></span></button>
+      ${S.noAds?"":`<button class="textbtn" data-buy="noads">Remove ads only <span data-price="${PRODUCTS.noads}"></span></button>`}
+      <button class="textbtn small" data-restore>Restore purchases</button>`
+    :`<div class="msg">Available in the Android app.</div>`}</div>`;
+}
+function wireStore(root,source){
+  const cv=root.querySelector(".plusblob");if(cv)previewBlob(cv,SKINS.find(s=>s.id==="golden"));
+  if(!IAP)return;
+  IAP.products(Object.values(PRODUCTS)).then(p=>root.querySelectorAll("[data-price]").forEach(el=>{const x=p[el.dataset.price];if(x)el.textContent=x.price})).catch(()=>{});
+  root.querySelectorAll("[data-buy]").forEach(b=>b.onclick=e=>{e.stopPropagation();SFX.ui();track(`buy_tap_${b.dataset.buy}_${source}`);
+    parentGate(()=>buy(b.dataset.buy==="plus"?PRODUCTS.plus:PRODUCTS.noads))});
+  const r=root.querySelector("[data-restore]");if(r)r.onclick=e=>{e.stopPropagation();SFX.ui();restorePurchases(true)};
+}
+let buying=false, lockedOffered=false;
+function buy(id){
+  if(!IAP||buying)return; buying=true;
+  IAP.buy(id).then(res=>{buying=false;
+    if(res==="ok"){track("purchase_"+id);grant(id);SFX.zone();confetti();
+      toast(id===PRODUCTS.plus?"Snug Plus unlocked. Thank you!":"Ads removed. Thank you!","star");
+      document.querySelectorAll(".modal").forEach(m=>{if(m.querySelector(".plus"))closePanel(m)})}
+    else if(res==="pending")toast("Purchase pending: it unlocks once it's paid","star");
+    else toast("Purchase cancelled","x");
+  },()=>{buying=false;toast("Couldn't reach Google Play. Try again later.","x")});
+}
+function grant(id){if(id===PRODUCTS.plus)S.plus=true;if(id===PRODUCTS.plus||id===PRODUCTS.noads)S.noAds=true;save();renderHome()}
+function applyOwned(ids){   // Google Play is the source of truth: a refund takes the perks away again
+  S.plus=ids.includes(PRODUCTS.plus); S.noAds=S.plus||ids.includes(PRODUCTS.noads);
+  if(!ownsSkin(skin()))S.skin="peach"; const h=HATS.find(x=>x.id===S.hat); if(h&&!ownsHat(h))S.hat="none";
+  save(); renderHome();
+}
+function restorePurchases(loud){if(!IAP)return;
+  IAP.owned().then(ids=>{applyOwned(ids);if(loud)toast(ids.length?"Purchases restored":"No purchases on this Google account","star")},
+    ()=>{if(loud)toast("Couldn't reach Google Play. Try again later.","x")})}
+// A gentle, contextual offer: never mid-run, never in the first session, at most once a day.
+function plusOffer(source){
+  if(!IAP||S.plus)return; track("offer_view_"+source); S.offerDay=todayKey(); save();
+  wireStore(panel("SNUG PLUS","var(--yellow)",storeCard()),source);
+}
+function lockedOffer(){if(IAP&&!S.plus&&S.sessions>1&&!lockedOffered&&S.offerDay!==todayKey()){lockedOffered=true;setTimeout(()=>plusOffer("locked"),700)}}
+function statsText(){
+  const r=ST.runs, e=k=>ST.ev[k]||0, sum=pre=>Object.keys(ST.ev).filter(k=>k.startsWith(pre)).reduce((a,k)=>a+ST.ev[k],0);
+  const med=a=>{if(!a.length)return 0;const x=[...a].sort((p,q)=>p-q);return x[Math.floor(x.length/2)]};
+  const days=Object.keys(ST.days).map(Number).sort((a,b)=>a-b);
+  return [`Snug tester stats (build ${BUILD})`,
+    `Installed ${ST.install}, ${dayDiff(ST.install,todayKey())} days ago`,
+    `Played on days: ${days.join(", ")||"-"} · back on day 1: ${ST.days[1]?"yes":"no"} · day 7: ${ST.days[7]?"yes":"no"}`,
+    `Sessions ${days.reduce((a,d)=>a+ST.days[d],0)} · runs ${r.length} · first run ${ST.firstRun??"-"} gates`,
+    `Typical run: ${med(r.map(x=>x[2]))} s, ${med(r.map(x=>x[1]))} gates, score ${med(r.map(x=>x[0]))} · best ${Math.max(0,...r.map(x=>x[0]))}`,
+    `Runs ended by crash ${r.filter(x=>x[3]==="c").length}, by fading ${r.filter(x=>x[3]==="f").length}`,
+    `Revives offered ${e("revive_offer")}, taken ${e("revive_taken")}`,
+    `Ads seen: videos ${e("ad_rewarded")}, between runs ${e("ad_interstitial")}`,
+    `Store: collection opened ${e("collection_view")}, offers shown ${sum("offer_view_")}, buy taps ${sum("buy_tap_")}, purchases ${sum("purchase_")}`,
+    `Shares: challenges ${e("share_challenge")}, dailies ${e("share_daily")} · daily challenges played ${e("daily_done")}`];
+}
+function statsPanel(){
+  const lines=statsText();
+  const m=panel("TESTER STATS","var(--purple)",`<div class="stattext">${lines.map(l=>`<div>${l}</div>`).join("")}</div>
+    <p class="note">Counted on this phone only. Nothing is sent anywhere unless you copy it and send it yourself.</p>
+    <button class="btn purple wide" data-copy>${ic("share")}COPY STATS</button>`);
+  m.querySelector("[data-copy]").onclick=e=>{e.stopPropagation();const t=lines.join("\n");
+    (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Stats copied","check"),()=>toast("Couldn't copy: take a screenshot instead","x"))};
 }
 function settingsPanel(){
   const m=panel("SETTINGS","var(--blue)",`
@@ -1428,6 +1538,7 @@ function settingsPanel(){
   m.querySelector("#swM").onclick=e=>{S.music=!S.music;e.currentTarget.setAttribute("aria-pressed",S.music);audio();save()};
   m.querySelector("#swS").onclick=e=>{S.sound=!S.sound;e.currentTarget.setAttribute("aria-pressed",S.sound);audio();if(sfxBus)sfxBus.gain.value=S.sound?1:0;SFX.ui();save()};
   m.querySelector("#swH").onclick=e=>{S.haptics=!S.haptics;e.currentTarget.setAttribute("aria-pressed",S.haptics);buzz(15);save()};
+  let taps=0,tapT=0; m.querySelector(".note").onclick=()=>{const now=performance.now();taps=now-tapT<2500?taps+1:1;tapT=now;if(taps>=5){taps=0;statsPanel()}};   // hidden tester screen
   const rb=m.querySelector("#bReset");let armed=false;
   rb.onclick=()=>{if(!armed){armed=true;rb.textContent="TAP AGAIN TO ERASE";return}
     S=Object.assign(fresh(),{sessions:1});save();m.remove();const info=checkStreak();renderHome();if(info)streakModal(info)};
@@ -1485,7 +1596,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="14";
+const BUILD="15";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
@@ -1501,6 +1612,8 @@ if(LIVE&&"serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.
 // ---------- boot ----------
 function boot(){
   resize(); ensureMissions(); renderHome(); show("home");
+  {const dn=Math.max(0,dayDiff(ST.install,todayKey()));ST.days[dn]=(ST.days[dn]||0)+1;stSave()}
+  if(IAP)restorePurchases(false);
   const info=checkStreak(); if(info) streakModal(info);
   readChallenge();
   requestAnimationFrame(t=>{last=t;frame(t)});

@@ -90,3 +90,19 @@ runs entirely on the player's phone; the website is free GitHub Pages; ads *pay 
   anyone, which is exactly how the large surprise bills happen.
 - **Apple:** skipped for now ($99 a year).
 
+## Store setup (Snug Plus and Remove Ads)
+
+The app's code for both purchases is built in (build 15) and tested with a simulated Google Play (`?iap=sim`). To make them
+real, once the Play Console account exists:
+
+1. Play Console → your app → **Monetize → Products → In-app products** → create two one-time ("managed") products:
+   - `snug_plus` (Snug Plus: no ads between runs, every skin and hat, the Golden blob)
+   - `snug_remove_ads` (Remove Ads)
+2. Set prices per country by hand rather than auto-converting: India ₹129 / ₹79, US $2.99 / $1.99, and similar elsewhere.
+3. Activate both. Purchases can be tested by adding testers as **license testers** (Setup → License testing): they buy
+   with test cards and are never charged.
+4. In the **Data safety** form, purchases count as "purchase history", handled by Google Play; Snug collects nothing else.
+
+Fair-play rules the code follows: cosmetics and comfort only, a parental gate before every purchase, no offers during a run
+or in the first session, at most one contextual offer a day, and Google Play decides what you own (refunds take perks away).
+

@@ -29,6 +29,37 @@
     };
   }
 
+  // ---- in-app purchases (Google Play Billing): one-time products only ----
+  // products(ids) -> {id: {price}}, buy(id) -> "ok" | "pending" | "cancel", owned() -> ids this Google account owns now.
+  // The plugin acknowledges completed purchases automatically (Google refunds any left unacknowledged for 3 days);
+  // restorePurchases() first also acknowledges any that were still pending when the app last closed.
+  var NP = P.NativePurchases;
+  if (NP) {
+    window.SNUG_IAP = {
+      products: function (ids) {
+        return NP.getProducts({ productIdentifiers: ids, productType: "inapp" }).then(function (r) {
+          var o = {}; (r.products || []).forEach(function (p) { o[p.identifier] = { price: p.priceString }; }); return o;
+        });
+      },
+      buy: function (id) {
+        return NP.purchaseProduct({ productIdentifier: id, productType: "inapp" }).then(function (t) {
+          return t && t.purchaseState === "0" ? "pending" : "ok";
+        }, function (e) {
+          var msg = String((e && (e.message || e.code)) || e);
+          if (/cancel/i.test(msg)) return "cancel";
+          throw e;
+        });
+      },
+      owned: function () {
+        return NP.restorePurchases().catch(function () {}).then(function () {
+          return NP.getPurchases({ productType: "inapp" });
+        }).then(function (r) {
+          return (r.purchases || []).filter(function (t) { return t.purchaseState === "1"; }).map(function (t) { return t.productIdentifier; });
+        });
+      }
+    };
+  }
+
   // ---- ads (AdMob), set up for a young audience ----
   var AdMob = P.AdMob;
   if (!AdMob || !CFG.ads) return;
