@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 8 384 192" role="img" aria-label="Snug">
+  <defs>
+    <path id="snL" d="M64 50 C58 41 49 38 40 38 C26 38 17 46 17 56 C17 67 28 71 41 75 C55 79 65 84 65 96 C65 107 54 114 40 114 C29 114 19 110 13 101
+             M94 114 V64 C94 48 105 38 120 38 C135 38 146 48 146 64 V114
+             M176 38 V82 C176 102 190 114 212 114 C234 114 248 102 248 82 V38 V114
+             M342 38 V128 C342 150 326 162 306 162 C292 162 281 157 274 148"/>
+    <circle id="snG" cx="306" cy="76" r="36"/>
+    <clipPath id="snC"><ellipse cx="212" cy="77" rx="24.5" ry="25"/></clipPath>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#2b2040" stroke-width="38" transform="translate(0 7)"><use href="#snL"/><use href="#snG"/></g>
+    <g stroke="#2b2040" stroke-width="38"><use href="#snL"/><use href="#snG"/></g>
+    <g stroke="#fffaf0" stroke-width="24"><use href="#snL"/><use href="#snG"/></g>
+  </g>
+  <g class="lblob">
+    <ellipse cx="212" cy="77" rx="24.5" ry="25" fill="var(--lb,#ffa979)"/>
+    <g clip-path="url(#snC)">
+      <path d="M182 82 a30 30 0 0 0 60 0 a31 26 0 0 1 -60 0z" fill="var(--ld,#e2734a)" opacity=".9"/>
+      <ellipse cx="202" cy="64" rx="5.4" ry="3.2" transform="rotate(-35 202 64)" fill="#fff" opacity=".8"/>
+    </g>
+    <ellipse cx="212" cy="77" rx="24.5" ry="25" fill="none" stroke="#2b2040" stroke-width="4.5"/>
+    <ellipse cx="205" cy="76" rx="2.5" ry="3.4" fill="#2b2040"/><ellipse cx="219" cy="76" rx="2.5" ry="3.4" fill="#2b2040"/>
+    <circle cx="204.2" cy="74.6" r="1" fill="#fff"/><circle cx="218.2" cy="74.6" r="1" fill="#fff"/>
+    <path d="M208.5 83.5 q3.5 3.5 7 0" fill="none" stroke="#2b2040" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="200" cy="83" rx="3" ry="1.8" fill="#ff5a78" opacity=".35"/><ellipse cx="224" cy="83" rx="3" ry="1.8" fill="#ff5a78" opacity=".35"/>
+  </g>
+</svg>

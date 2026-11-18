@@ -25,12 +25,14 @@
 </head>
 <body>
 <style>
-/* Art direction: bright cartoon "sticker" world. One ink outline colour on everything, chunky 3D buttons,
+/* Art direction: bright cartoon "sticker" world in play, calmer in menus (soft palette, plain button text). One ink outline colour on everything, chunky 3D buttons,
    paper panels with ribbon headers. Deliberately a single light world (it's a game scene, not a document). */
 :root{
   --ink:#2b2040; --paper:#fffaf0; --paper2:#f2e8d6; --muted:#7a6d8e;
-  --green:#5fd34a; --greenD:#2f9a2c; --yellow:#ffcf3a; --yellowD:#d18f00;
-  --pink:#ff6f91; --pinkD:#c93d62; --blue:#3fb4f0; --blueD:#1f7fc0; --purple:#8a6bff; --purpleD:#5b3fd0;
+  /* menu palette: softer, less saturated than the gameplay colours so menus feel calm */
+  --green:#43b88a; --greenD:#2b8366; --yellow:#f3c552; --yellowD:#c4922c;
+  --pink:#ee7f8f; --pinkD:#b8535f; --blue:#4ba3d6; --blueD:#2d70a0; --purple:#7b70d4; --purpleD:#5149a0;
+  --soft:0 2px 0 rgba(43,32,64,.38);
   --sky:#56c3f0;
   --display:"Lilita One","Arial Rounded MT Bold","Arial Black",system-ui,sans-serif;
   --body:"Nunito",ui-rounded,"Segoe UI",system-ui,sans-serif;
@@ -58,12 +60,12 @@ button:focus-visible{outline:4px solid #fff;outline-offset:3px}
 
 /* ---- buttons ---- */
 .btn{--c:var(--green);--cd:var(--greenD);display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  font-family:var(--display);font-size:24px;letter-spacing:.02em;color:#fff;text-shadow:var(--o2),0 2px 0 var(--ink);
+  font-family:var(--display);font-size:24px;letter-spacing:.03em;color:#fff;text-shadow:var(--soft);
   background:var(--c);border:3px solid var(--ink);border-radius:20px;padding:12px 22px 15px;
   box-shadow:inset 0 -7px 0 var(--cd),inset 0 4px 0 rgba(255,255,255,.45),0 5px 0 var(--ink);transition:transform .06s}
 .btn:active{transform:translateY(4px);box-shadow:inset 0 -4px 0 var(--cd),inset 0 3px 0 rgba(255,255,255,.4),0 1px 0 var(--ink)}
 .btn .ic{font-size:26px;filter:drop-shadow(0 2px 0 var(--ink))}
-.btn.yellow{--c:var(--yellow);--cd:var(--yellowD)} .btn.pink{--c:var(--pink);--cd:var(--pinkD)}
+.btn.yellow{--c:var(--yellow);--cd:var(--yellowD);color:var(--ink);text-shadow:none} .btn.pink{--c:var(--pink);--cd:var(--pinkD)}
 .btn.blue{--c:var(--blue);--cd:var(--blueD)} .btn.purple{--c:var(--purple);--cd:var(--purpleD)}
 .btn.big{font-size:32px;padding:14px 26px 18px;border-radius:24px}
 .btn.wide{width:100%}
@@ -91,20 +93,17 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 
 /* ---- home ---- */
 .logo{text-align:center;margin-top:clamp(14px,5vh,48px)}
-.logo h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(84px,27vw,124px);line-height:.9;letter-spacing:.01em;display:inline-flex}
-.logo h1 span{display:inline-block;text-shadow:var(--o3),4px 4px 0 var(--ink),0 9px 0 var(--ink);animation:bob 2.4s ease-in-out infinite}
-.logo h1 span:nth-child(1){color:var(--pink);transform:rotate(-8deg)}
-.logo h1 span:nth-child(2){color:var(--yellow);animation-delay:.15s}
-.logo h1 span:nth-child(3){color:var(--green);animation-delay:.3s}
-.logo h1 span:nth-child(4){color:var(--blue);animation-delay:.45s;transform:rotate(7deg)}
-@keyframes bob{50%{translate:0 -7px}}
-.tagline{display:inline-block;margin-top:6px;font-family:var(--display);font-size:20px;color:#fff;background:var(--purple);border:3px solid var(--ink);border-radius:12px;
-  padding:3px 14px 5px;box-shadow:0 3px 0 var(--ink);text-shadow:var(--o2);transform:rotate(-3deg)}
+.logo h1{margin:0 auto;width:min(300px,78vw);line-height:0}
+.wordmark{width:100%;height:auto;display:block;overflow:visible}
+.lblob{transform-box:fill-box;transform-origin:50% 100%;animation:snugbreathe 2.8s ease-in-out infinite}
+@keyframes snugbreathe{50%{transform:scale(1.04,.96)}}
+@media (prefers-reduced-motion:reduce){.lblob{animation:none}}
+.tagline{display:inline-block;margin-top:4px;font-family:var(--body);font-weight:900;font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:#fff;text-shadow:var(--soft)}
 .bestpill{margin:14px auto 0;width:max-content;display:flex;align-items:center;gap:8px;padding:5px 16px 5px 8px;background:rgba(43,32,64,.55);border-radius:14px;
   font-family:var(--display);font-size:20px;color:#fff;letter-spacing:.03em}
 .bestpill .ic{font-size:26px}
 .spacer{flex:1}
-.dcbtn{align-self:center;width:min(330px,calc(100% - 32px));margin-bottom:14px;flex-direction:column;gap:0;padding:8px 16px 11px;line-height:1.05}
+.dcbtn{align-self:center;width:min(330px,calc(100% - 32px));margin-top:clamp(12px,3vh,24px);flex-direction:column;gap:0;padding:8px 16px 11px;line-height:1.05}
 .dcbtn .dct{display:flex;align-items:center;gap:8px;font-size:24px}
 .dcbtn .dcs{font-family:var(--body);font-weight:900;font-size:13px;letter-spacing:.04em;color:var(--ink);text-shadow:none;opacity:.85}
 .dcbtn.done{--c:#fff2c2;--cd:#e8cf7a}
@@ -112,10 +111,12 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .dcgrid{font-size:20px;line-height:1.25;letter-spacing:2px;white-space:pre;font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .dcrules{display:grid;gap:6px;text-align:left;margin:0 auto;font-weight:900;font-size:15px}
 .dcrules div{display:flex;gap:8px;align-items:center}.dcrules .ic{font-size:22px;flex:none}
-.holdhint{align-self:center;margin-bottom:16px;font-family:var(--display);font-size:26px;letter-spacing:.04em;animation:pulse 1.2s ease-in-out infinite}
+.holdhint{align-self:center;margin-bottom:16px;font-family:var(--display);font-size:22px;letter-spacing:.08em;animation:pulse 1.6s ease-in-out infinite}
+.holdhint.outline{text-shadow:none;background:rgba(43,32,64,.5);border-radius:14px;padding:4px 16px 6px}
 @keyframes pulse{50%{transform:scale(.92);opacity:.75}}
 .dock{display:flex;justify-content:center;gap:clamp(18px,8vw,40px)}
-.dockbtn{display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--display);font-size:16px;color:#fff;text-shadow:var(--o2),0 2px 0 var(--ink)}
+.dockbtn{display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--display);font-size:16px;letter-spacing:.03em;color:#fff;text-shadow:var(--soft)}
+.dock .rbtn{--c:var(--paper);--cd:var(--paper2)}.dock .rbtn .ic{filter:none}
 
 /* ---- hud ---- */
 .hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:start}
@@ -133,7 +134,7 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
 .panel{position:relative;background:var(--paper);border:4px solid var(--ink);border-radius:28px;box-shadow:0 8px 0 var(--ink);
   padding:42px 18px 18px;display:grid;gap:12px;text-align:center}
 .ribbon{position:absolute;top:-24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:var(--display);font-size:28px;letter-spacing:.03em;
-  color:#fff;text-shadow:var(--o2),0 3px 0 var(--ink);background:var(--rc,var(--pink));border:4px solid var(--ink);border-radius:16px;padding:4px 22px 7px;
+  color:#fff;text-shadow:var(--soft);background:var(--rc,var(--pink));border:4px solid var(--ink);border-radius:16px;padding:4px 22px 7px;
   box-shadow:inset 0 -6px 0 rgba(0,0,0,.18),0 4px 0 var(--ink)}
 .xbtn{position:absolute;top:-16px;right:-12px}
 .lbl{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:900}
@@ -307,12 +308,13 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
       <button class="rbtn small" id="bSet" aria-label="Settings"><svg class="ic"><use href="#i-gear"/></svg></button>
     </div>
     <div class="logo passthru">
-      <h1 aria-label="Snug"><span>S</span><span>n</span><span>u</span><span>g</span></h1>
-      <div><span class="tagline">Fit the gap!</span></div>
+      <h1><svg class="wordmark" viewBox="-12 8 384 192" role="img" aria-label="Snug"> <defs> <path id="snL" d="M64 50 C58 41 49 38 40 38 C26 38 17 46 17 56 C17 67 28 71 41 75 C55 79 65 84 65 96 C65 107 54 114 40 114 C29 114 19 110 13 101 M94 114 V64 C94 48 105 38 120 38 C135 38 146 48 146 64 V114 M176 38 V82 C176 102 190 114 212 114 C234 114 248 102 248 82 V38 V114 M342 38 V128 C342 150 326 162 306 162 C292 162 281 157 274 148"/> <circle id="snG" cx="306" cy="76" r="36"/> <clipPath id="snC"><ellipse cx="212" cy="77" rx="24.5" ry="25"/></clipPath> </defs> <g fill="none" stroke-linecap="round" stroke-linejoin="round"> <g stroke="#2b2040" stroke-width="38" transform="translate(0 7)"><use href="#snL"/><use href="#snG"/></g> <g stroke="#2b2040" stroke-width="38"><use href="#snL"/><use href="#snG"/></g> <g stroke="#fffaf0" stroke-width="24"><use href="#snL"/><use href="#snG"/></g> </g> <g class="lblob"> <ellipse cx="212" cy="77" rx="24.5" ry="25" fill="var(--lb,#ffa979)"/> <g clip-path="url(#snC)"> <path d="M182 82 a30 30 0 0 0 60 0 a31 26 0 0 1 -60 0z" fill="var(--ld,#e2734a)" opacity=".9"/> <ellipse cx="202" cy="64" rx="5.4" ry="3.2" transform="rotate(-35 202 64)" fill="#fff" opacity=".8"/> </g> <ellipse cx="212" cy="77" rx="24.5" ry="25" fill="none" stroke="#2b2040" stroke-width="4.5"/> <ellipse cx="205" cy="76" rx="2.5" ry="3.4" fill="#2b2040"/><ellipse cx="219" cy="76" rx="2.5" ry="3.4" fill="#2b2040"/> <circle cx="204.2" cy="74.6" r="1" fill="#fff"/><circle cx="218.2" cy="74.6" r="1" fill="#fff"/> <path d="M208.5 83.5 q3.5 3.5 7 0" fill="none" stroke="#2b2040" stroke-width="2.4" stroke-linecap="round"/> <ellipse cx="200" cy="83" rx="3" ry="1.8" fill="#ff5a78" opacity=".35"/><ellipse cx="224" cy="83" rx="3" ry="1.8" fill="#ff5a78" opacity=".35"/> </g>
+</svg></h1>
+      <div><span class="tagline">Fit the gap</span></div>
       <div class="bestpill"><svg class="ic"><use href="#i-trophy"/></svg>BEST <b id="hBest">0</b></div>
     </div>
-    <div class="spacer passthru"></div>
     <button class="btn yellow dcbtn" id="bDC"><span class="dct"><svg class="ic"><use href="#i-cal"/></svg><span id="dcT">DAILY CHALLENGE</span></span><span class="dcs" id="dcS">Same gates for everyone today</span></button>
+    <div class="spacer passthru"></div>
     <div class="holdhint outline passthru">HOLD TO PLAY</div>
     <nav class="dock">
       <button class="dockbtn" id="bSkins"><span class="rbtn pink"><svg class="ic"><use href="#i-blob"/></svg></span>Skins</button>
@@ -1252,6 +1254,7 @@ function dailyPanel(){
 // ---------- home & panels ----------
 function renderHome(){
   ensureMissions(); renderDC();
+  const lg=document.querySelector(".logo");lg.style.setProperty("--lb",skin().c);lg.style.setProperty("--ld",skin().d);   // the logo's blob wears your skin
   $("hCoins").textContent=S.coins;$("hLvl").textContent=S.level;$("hStreak").textContent=Math.max(1,S.streak);$("hBest").textContent=S.best;
   $("hXp").style.width=Math.round(S.xp/xpNeed(S.level)*100)+"%";
   const open=S.missions.filter(m=>!m.done).length;$("mBadge").textContent=open;$("mBadge").hidden=open===0;
@@ -1343,7 +1346,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="8";
+const BUILD="9";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
