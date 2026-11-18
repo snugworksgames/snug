@@ -104,6 +104,14 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
   font-family:var(--display);font-size:20px;color:#fff;letter-spacing:.03em}
 .bestpill .ic{font-size:26px}
 .spacer{flex:1}
+.dcbtn{align-self:center;width:min(330px,calc(100% - 32px));margin-bottom:14px;flex-direction:column;gap:0;padding:8px 16px 11px;line-height:1.05}
+.dcbtn .dct{display:flex;align-items:center;gap:8px;font-size:24px}
+.dcbtn .dcs{font-family:var(--body);font-weight:900;font-size:13px;letter-spacing:.04em;color:var(--ink);text-shadow:none;opacity:.85}
+.dcbtn.done{--c:#fff2c2;--cd:#e8cf7a}
+.dcbtn.done .dct{color:var(--ink);text-shadow:none}
+.dcgrid{font-size:20px;line-height:1.25;letter-spacing:2px;white-space:pre;font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.dcrules{display:grid;gap:6px;text-align:left;margin:0 auto;font-weight:900;font-size:15px}
+.dcrules div{display:flex;gap:8px;align-items:center}.dcrules .ic{font-size:22px;flex:none}
 .holdhint{align-self:center;margin-bottom:16px;font-family:var(--display);font-size:26px;letter-spacing:.04em;animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(.92);opacity:.75}}
 .dock{display:flex;justify-content:center;gap:clamp(18px,8vw,40px)}
@@ -304,6 +312,7 @@ button:active .rbtn,.rbtn:active{transform:translateY(3px);box-shadow:inset 0 -3
       <div class="bestpill"><svg class="ic"><use href="#i-trophy"/></svg>BEST <b id="hBest">0</b></div>
     </div>
     <div class="spacer passthru"></div>
+    <button class="btn yellow dcbtn" id="bDC"><span class="dct"><svg class="ic"><use href="#i-cal"/></svg><span id="dcT">DAILY CHALLENGE</span></span><span class="dcs" id="dcS">Same gates for everyone today</span></button>
     <div class="holdhint outline passthru">HOLD TO PLAY</div>
     <nav class="dock">
       <button class="dockbtn" id="bSkins"><span class="rbtn pink"><svg class="ic"><use href="#i-blob"/></svg></span>Skins</button>
@@ -422,7 +431,7 @@ const MEDALS=[["BRONZE",30,"#e0965a"],["SILVER",80,"#d3dbe6"],["GOLD",160,"#ffcf
 
 // ---------- save ----------
 const DEF={best:0,coins:0,xp:0,level:1,skins:["peach"],skin:"peach",hats:["none"],hat:"none",theme:"pond",streak:0,lastDay:null,
-  mDay:null,missions:[],runs:0,sessions:0,sound:true,music:true,haptics:true,seen:{},zone:0};
+  mDay:null,missions:[],runs:0,sessions:0,sound:true,music:true,haptics:true,seen:{},zone:0,dc:null,dcStreak:0,dcLast:null,dcBest:0};
 const fresh=()=>JSON.parse(JSON.stringify(DEF)); // deep copy, so a reset never inherits earlier purchases
 let S=fresh();
 try{const raw=localStorage.getItem("snug.v1");if(raw)S=Object.assign(fresh(),JSON.parse(raw))}catch(e){}
@@ -531,14 +540,28 @@ let blobR=HOME_R, blobVis=1, squish=0, wob=0, shake=0, freezeUntil=0, flash=0, c
 let parts=[], pops=[], zoneT=-9, pwKey="";
 let hitStop=0, pulse=0, fireT=0;   // freeze-frame on big hits, blob pulse on a great fit, on-fire trail timer
 let CH=null;                       // active friend challenge: {seed, target}
+let DC=null;                       // active daily challenge: {day, num, seed}
+
+// ---------- daily challenge: the same gates for everyone on a calendar date, one scored try ----------
+const DC_EPOCH="2026-11-18";       // Daily #1
+const dcNum=(day=todayKey())=>dayDiff(DC_EPOCH,day)+1;
+const dcSeed=(day=todayKey())=>Math.floor(seeded("snug-daily-"+day)()*1e6);
+const dcPlayed=()=>S.dc&&S.dc.day===todayKey();
+const DC_MARK={S:"🟨",P:"🟩",G:"🟦",L:"⬜",X:"💥",F:"💨"};
+function dcGrid(log,max=30){
+  const cells=log.slice(0,max).map(c=>DC_MARK[c]||"⬜");let rows=[];
+  for(let i=0;i<cells.length;i+=10)rows.push(cells.slice(i,i+10).join(""));
+  if(log.length>max)rows.push(`+${log.length-max} more`);
+  return rows.join("\n");
+}
 const clouds=[]; for(let i=0;i<7;i++)clouds.push({x:rand(-40,LW+40),y:rand(-40,700),s:rand(.6,1.25),z:rand(.3,1)});
 const stars=[]; for(let i=0;i<40;i++)stars.push({x:Math.random()*LW,y:Math.random()*900,p:Math.random()*6,s:rand(.6,1.8)});
 const sessionStart=performance.now(); let runsSinceInter=0, lastRewardedAt=-1e9;
 
 function newRun(){
-  const seed=CH?CH.seed:Math.floor(Math.random()*1e6);
-  R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],gems:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,smash:0,gemsGot:0,boxes:0,cont:false,doubled:false,first:S.runs===0,t:0,
-    zone:0,prevZone:0,nextBox:6,lastType:"",pw:{shield:false,slowUntil:0,dblUntil:0},seed,rng:mulberry(seed),chWon:false};
+  const seed=DC?DC.seed:CH?CH.seed:Math.floor(Math.random()*1e6);
+  R={n:0,score:0,glow:3,chain:0,bestChain:0,gates:[],gems:[],passed:0,perfects:0,coins:0,squeezes:0,gold:0,smash:0,gemsGot:0,boxes:0,cont:false,doubled:false,first:S.runs===0&&!DC,t:0,daily:!!DC,log:[],
+    zone:0,prevZone:0,nextBox:6,lastType:"",pw:{shield:false,slowUntil:0,dblUntil:0},seed,rng:mulberry(seed),prng:mulberry(seed^0x5eed),chWon:false};   // prng: power-ups, so the same gates give the same boxes
   blobR=Math.min(blobR,30); blobVis=1; parts=[]; pops=[]; sinceToggle=0; hitStop=0; pulse=0;
   spawnUntilTop(BY-310);
 }
@@ -618,6 +641,7 @@ function judge(g){
   } else {
     R.chain=0;label=R.first&&R.passed<8?"TOO LOOSE!":"LOOSE";col=C_BAD;SFX.loose();buzz(25);R.glow--;
   }
+  R.log.push(label==="SQUEEZE!"?"S":great?"P":pts>0?"G":"L");
   R.bestChain=Math.max(R.bestChain,R.chain);
   const mult=1+Math.min(4,Math.floor(R.chain/3));
   R.score+=pts*mult*(dblOn()?2:1);
@@ -637,7 +661,7 @@ function judge(g){
   if(R.glow<=0){fadeOut()}
 }
 function openBox(){
-  const keys=Object.keys(POWERS),k=keys[Math.floor(Math.random()*keys.length)];R.boxes++;
+  const keys=Object.keys(POWERS),k=keys[Math.floor(R.prng()*keys.length)];R.boxes++;
   if(k==="shield")R.pw.shield=true; else if(k==="slow")R.pw.slowUntil=T+4; else R.pw.dblUntil=T+6;
   popup(POWERS[k][0],LW/2,BY-blobR-70,C_GOLD,30);SFX.reward();confetti();
 }
@@ -649,12 +673,12 @@ function shatter(g){
 function crash(g){
   state="dying"; holding=false; shake=14; squish=1; hitStop=.09; SFX.crash(); buzz([30,40,60]);
   for(let i=0;i<30;i++)parts.push({x:LW/2+rand(-blobR,blobR),y:BY+rand(-8,8),vx:rand(-260,260),vy:rand(-340,40),life:rand(.5,1),max:1,c:skin().c,s:rand(4,9),g:700});
-  R.end="crash"; setTimeout(endRun,900);
+  R.end="crash"; R.log.push("X"); setTimeout(endRun,900);
 }
-function fadeOut(){state="dying";holding=false;R.end="fade";SFX.loose();setTimeout(endRun,900)}
+function fadeOut(){state="dying";holding=false;R.end="fade";R.log.push("F");SFX.loose();setTimeout(endRun,900)}
 // After a fail: offer one rewarded revive (player's choice, 4 s), then score the run exactly once.
 function endRun(){
-  if(!R.cont&&R.score>=6){state="revive";reviveModal();return}
+  if(!R.cont&&!R.daily&&R.score>=6){state="revive";reviveModal();return}   // the daily is one clean try for everyone
   gameOver();
 }
 
@@ -973,8 +997,10 @@ function gameOver(){
   const xpGain=R.score+R.passed; S.xp+=xpGain; let leveled=[];
   while(S.xp>=xpNeed(S.level)){S.xp-=xpNeed(S.level);S.level++;S.coins+=20;leveled.push(S.level)}
   save();
+  let dcInfo=null;
+  if(R.daily){dcInfo=dcRecord(R);DC=null}
   const rb=R.chWon?RIBBON.won:isBest&&R.score>0?RIBBON.best:RIBBON[R.end];
-  $("oTitle").textContent=rb[0];$("oTitle").style.setProperty("--rc",rb[1]);
+  $("oTitle").textContent=dcInfo?`DAILY #${dcInfo.num}`:rb[0];$("oTitle").style.setProperty("--rc",dcInfo?"var(--purple)":rb[1]);
   countUp($("oScore"),R.score);
   const mi=MEDALS.filter(m=>R.score>=m[1]).length-1, nextMedal=MEDALS[mi+1];
   $("oMedal").innerHTML=(mi>=0?`<span class="medal" style="--mc:${MEDALS[mi][2]}">${ic("star")}${MEDALS[mi][0]} MEDAL</span>`:"")
@@ -985,11 +1011,12 @@ function gameOver(){
   else msg=S.runs<=3?"Too loose! Hold to grow.":"Fit tighter to keep your glow.";
   if(!isBest&&prevBest-R.score<=Math.max(3,Math.round(prevBest*.15))&&R.score>0) msg=`So close! ${prevBest-R.score+1} more beats your best.`;
   if(isBest&&prevBest>0) msg=`+${R.score-prevBest} over your old best!`;
-  if(CH) msg=R.chWon?`You beat ${CH.target}! Send your score back.`:`${CH.target-R.score+1} more to beat the challenge. Try again!`;
+  if(dcInfo) msg=`Today's score is in! ${dcInfo.streak>1?`${dcInfo.streak}-day daily streak. `:""}New gates in ${untilMidnight()}.`;
+  else if(CH) msg=R.chWon?`You beat ${CH.target}! Send your score back.`:`${CH.target-R.score+1} more to beat the challenge. Try again!`;
   $("oMsg").textContent=msg;
   $("oGates").textContent=R.passed;$("oPerf").textContent=R.perfects;$("oCoins").textContent=R.coins;
   $("bDouble").hidden=!(ADS&&R.coins>=3&&!R.doubled);
-  $("bShare").hidden=R.score<1||!(window.SNUG_SHARE_BASE||LIVE||location.protocol==="file:"||location.hostname==="localhost");   // previews have no shareable address
+  $("bShare").hidden=(R.score<1&&!R.daily)||!(window.SNUG_SHARE_BASE||LIVE||location.protocol==="file:"||location.hostname==="localhost");   // previews have no shareable address
   if(R.zone<ZONE_AT.length-1){const nx=ZONE_AT[R.zone+1];
     $("oZone").innerHTML=`<span>Next zone: <b>${THEMES[R.zone+1].name}</b> at gate ${nx}</span><span class="pb"><i style="width:${Math.round(R.passed/nx*100)}%"></i><span>${R.passed}/${nx}</span></span>`}
   else $("oZone").innerHTML=`<span>You reached the final zone: <b>${THEMES[R.zone].name}</b>!</span>`;
@@ -1006,9 +1033,59 @@ function continueRun(){
   state="play"; freezeUntil=T+1.1; show("hud"); updateHud();
 }
 function goHome(){
-  state="home";R=null;
+  state="home";R=null;DC=null;
   if(CH){CH=null;try{history.replaceState(null,"",location.pathname)}catch(e){}}   // leaving ends the friend challenge
   show("home");renderHome();
+}
+
+// Saves today's daily result (first try only) and updates the daily streak.
+function dcRecord(r){
+  const day=DC.day,num=DC.num;
+  if(!(S.dc&&S.dc.day===day)){
+    const y=new Date(day+"T12:00");y.setDate(y.getDate()-1);
+    S.dcStreak=S.dcLast===todayKey(y)?(S.dcStreak||0)+1:1; S.dcLast=day;
+    S.dc={day,num,score:r.score,gates:r.passed,perfects:r.perfects,log:r.log.join("")};
+    S.dcBest=Math.max(S.dcBest||0,r.score); save();
+  }
+  renderDC();
+  return {num,streak:S.dcStreak};
+}
+function dcShareText(){
+  const d=S.dc;
+  return `Snug Daily #${d.num} · ${d.score} points · ${d.gates} gates\n${dcGrid([...d.log])}${S.dcStreak>1?`\n${S.dcStreak}-day streak`:""}`;
+}
+function shareDaily(){
+  if(!dcPlayed())return;
+  const url=(window.SNUG_SHARE_BASE||location.href.split(/[?#]/)[0])+"?daily";
+  const text=dcShareText()+"\nCan you beat me? Same gates for everyone today:";
+  const fallback=()=>panel("SHARE","var(--purple)",`<div class="msg">Copy this and send it to a friend:</div><div class="linkbox">${text.replace(/\n/g,"<br>")}<br>${url}</div>`);
+  if(navigator.share){navigator.share({title:"Snug Daily",text,url}).catch(e=>{if(!e||e.name!=="AbortError")fallback()});return}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text+" "+url).then(()=>toast("Result copied! Send it to a friend","share"),fallback);return}
+  fallback();
+}
+function renderDC(){
+  const done=dcPlayed();
+  $("bDC").classList.toggle("done",!!done);
+  $("dcT").textContent=done?`DAILY #${S.dc.num}: ${S.dc.score}`:`DAILY CHALLENGE #${dcNum()}`;
+  $("dcS").textContent=done?`Done! New gates in ${untilMidnight()}`:(S.dcStreak>1&&S.dcLast===todayKey((()=>{const y=new Date();y.setDate(y.getDate()-1);return y})())?`Keep your ${S.dcStreak}-day streak going!`:"Same gates for everyone today");
+}
+function dcPanel(){
+  if(dcPlayed()){
+    const d=S.dc,canShare=!!(window.SNUG_SHARE_BASE||LIVE||location.protocol==="file:"||location.hostname==="localhost");
+    const m=panel(`DAILY #${d.num}`,"var(--purple)",`<div class="chalscore outline">${d.score}</div>
+      <div class="dcgrid">${dcGrid([...d.log])}</div>
+      <div class="stats"><div class="stat">${ic("gates")}<b>${d.gates}</b><span>Gates</span></div><div class="stat">${ic("star")}<b>${S.dcStreak||1}</b><span>Streak</span></div><div class="stat">${ic("trophy")}<b>${S.dcBest||d.score}</b><span>Best daily</span></div></div>
+      <div class="msg">New gates in ${untilMidnight()}</div>
+      ${canShare?`<button class="btn purple wide" data-share>${ic("share")}SHARE RESULT</button>`:""}`);
+    const b=m.querySelector("[data-share]");if(b)b.onclick=e=>{e.stopPropagation();SFX.ui();parentGate(shareDaily)};
+    return m;
+  }
+  const m=panel(`DAILY #${dcNum()}`,"var(--purple)",`<div class="msg">Everyone in the world gets the same gates today.</div>
+    <div class="dcrules"><div>${ic("play")}One try counts. Make it your best!</div><div>${ic("lock")}No second chances in the daily.</div><div>${ic("share")}Share your result and compare.</div></div>
+    <button class="btn wide" data-go>${ic("play")}START</button>`);
+  m.querySelector("[data-go]").onclick=e=>{e.stopPropagation();m.remove();
+    CH=null;DC={day:todayKey(),num:dcNum(),seed:dcSeed()};startRun();};
+  return m;
 }
 
 // ---------- parental gate: a grown-up answers a sum before anything leaves the game ----------
@@ -1035,6 +1112,7 @@ function shareChallenge(){
   fallback();
 }
 function readChallenge(){
+  if(/[?&]daily\b/.test(location.search)){try{history.replaceState(null,"",location.pathname)}catch(e){}dcPanel();return}   // a shared daily result
   const m=/[?&]c=(\d{1,7})-(\d{1,6})/.exec(location.search);
   if(!m)return;
   CH={seed:+m[1],target:+m[2]};
@@ -1173,7 +1251,7 @@ function dailyPanel(){
 
 // ---------- home & panels ----------
 function renderHome(){
-  ensureMissions();
+  ensureMissions(); renderDC();
   $("hCoins").textContent=S.coins;$("hLvl").textContent=S.level;$("hStreak").textContent=Math.max(1,S.streak);$("hBest").textContent=S.best;
   $("hXp").style.width=Math.round(S.xp/xpNeed(S.level)*100)+"%";
   const open=S.missions.filter(m=>!m.done).length;$("mBadge").textContent=open;$("mBadge").hidden=open===0;
@@ -1253,7 +1331,8 @@ document.addEventListener("visibilitychange",()=>{
 });
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 $("bPause").onclick=()=>{if(state==="play"&&!paused){paused=true;holding=false;humSet(true)}};
-$("bShare").onclick=()=>{SFX.ui();parentGate(shareChallenge)};
+$("bShare").onclick=()=>{SFX.ui();parentGate(R&&R.daily?shareDaily:shareChallenge)};
+$("bDC").onclick=()=>{SFX.ui();dcPanel()};
 
 $("bSkins").onclick=()=>{SFX.ui();skinsPanel()};
 $("bMis").onclick=()=>{SFX.ui();missionsPanel()};
@@ -1264,7 +1343,7 @@ $("bHome").onclick=()=>{SFX.ui();goHome()};
 $("bDouble").onclick=()=>showAd("rewarded",()=>{S.coins+=R.coins;R.doubled=true;save();$("oCoins").textContent=R.coins*2;$("bDouble").hidden=true;SFX.reward();toast(`+${R.coins} bonus coins`)});
 
 // ---------- stay fresh: phones' home-screen bookmarks cache the page, so check for a newer build ----------
-const BUILD="7";
+const BUILD="8";
 function checkForUpdate(){
   if(!LIVE)return;
   fetch(location.pathname+"?b="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{

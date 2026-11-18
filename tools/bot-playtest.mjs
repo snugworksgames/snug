@@ -4,7 +4,8 @@
 //   node tools/build.mjs && node tools/bot-playtest.mjs [screenshot-dir]
 //
 // Checks: no page errors, a full bot run with every mechanic, buying and wearing a hat, results screen,
-// challenge link round trip (a second player gets the identical gate sequence).
+// challenge link round trip (a second player gets the identical gate sequence), and the daily challenge
+// (same gates for everyone, one try, no revive, result saved and shareable).
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { readFileSync, existsSync, mkdirSync } from "node:fs";
@@ -68,6 +69,7 @@ async function play(page, maxMs, { takeRevive = true, label = "run" } = {}) {
     });
     for (const [n, spec] of s.specs || []) peak.layout.set(n, spec);
     if (s.state === "revive") {
+      peak.sawRevive = true;
       if (down) { await page.mouse.up(); down = false; }
       await page.click(takeRevive ? "#rvYes" : "#rvNo"); await page.waitForTimeout(200); continue;
     }
@@ -178,6 +180,39 @@ check(same && common.length >= 15, `both players get identical gates (compared $
 const won = await a.evaluate(() => ({ won: window.__g().R.chWon, score: window.__g().R.score, title: document.getElementById("oTitle").textContent }));
 check(won.score > target && won.won && won.title === "YOU WIN!", `beating the target shows YOU WIN (score ${won.score} vs ${target})`);
 await shot(a, "challenge-result");
+
+// 5. Daily challenge: same gates for two players, one scored try, no revive, result saved and shareable
+const d1 = await open(browser, base, rich);
+check(/DAILY CHALLENGE #\d+/.test(await d1.locator("#dcT").textContent()), "home shows the daily challenge button");
+await d1.click("#bDC"); await d1.waitForTimeout(300);
+await shot(d1, "daily-intro");
+await d1.click("[data-go]"); await d1.waitForTimeout(300);
+const dSeed = await d1.evaluate(() => window.__g().R.daily && window.__g().R.seed);
+const dPeakA = await play(d1, 25000, { label: "daily" });
+await finish(d1);
+const dRes = await d1.evaluate(() => ({ title: document.getElementById("oTitle").textContent, dc: window.__g().S.dc, score: window.__g().R.score, cont: window.__g().R.cont }));
+check(dSeed !== false && !dPeakA.sawRevive && !dRes.cont, "the daily run offers no revive");
+check(/^DAILY #\d+$/.test(dRes.title) && dRes.dc && dRes.dc.score === dRes.score && dRes.dc.log.length >= dRes.dc.gates,
+  `daily result is saved (score ${dRes.dc && dRes.dc.score}, ${dRes.dc && dRes.dc.gates} gates)`);
+await shot(d1, "daily-result");
+await d1.click("#bHome"); await d1.waitForTimeout(300);
+check(await d1.locator("#bDC.done").isVisible(), "after playing, the daily button shows today's score");
+await d1.click("#bDC"); await d1.waitForTimeout(300);
+check(await d1.locator(".dcgrid").isVisible() && !(await d1.locator("[data-go]").count()), "a second try is not offered; the result card shows instead");
+await d1.click("[data-share]"); await d1.waitForTimeout(300);
+const gq = await d1.evaluate(() => { const [a, b] = document.querySelector(".gateq").textContent.match(/\d+/g).map(Number); return a * b; });
+await d1.click(`.gate [data-a="${gq}"]`); await d1.waitForTimeout(500);
+const dShared = await d1.evaluate(() => (document.querySelector(".linkbox") || document.querySelector(".toast") || {}).textContent || "");
+check(/Snug Daily #\d+ · \d+ points/.test(dShared) || /copied/i.test(dShared), `sharing the daily result works (${dShared.slice(0, 36).replace(/\n/g, " ")})`);
+await shot(d1, "daily-share");
+// a friend opens the shared daily link: same seed, same gates
+const d2 = await open(browser, `${base}?daily`, { ...rich, dc: null });
+check(await d2.locator("[data-go]").isVisible(), "a shared daily link opens the daily challenge");
+await d2.click("[data-go]"); await d2.waitForTimeout(300);
+check(await d2.evaluate(() => window.__g().R.seed) === dSeed, "the friend gets today's daily seed");
+const dPeakB = await play(d2, 20000);
+const dCommon = [...dPeakA.layout.keys()].filter((n) => dPeakB.layout.has(n));
+check(dCommon.length >= 12 && dCommon.every((n) => dPeakA.layout.get(n) === dPeakB.layout.get(n)), `both players get identical daily gates (compared ${dCommon.length})`);
 
 check(errors.length === 0, `no page errors${errors.length ? ": " + errors.slice(0, 3).join(" | ") : ""}`);
 await browser.close();
