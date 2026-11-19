@@ -114,3 +114,6 @@ or in the first session, at most one contextual offer a day, and Google Play dec
 - Seasonal events run by date with no server: Winter Fest (1 Dec – 7 Jan), Festival of Colours (March),
   Summer Splash (15 Jun – 15 Jul) and Spooky Season (20 Oct – 2 Nov). Preview one with `?event=winter`.
 
+## After the closed test
+
+Signature system to consider next: [ON_THE_BEAT.md](ON_THE_BEAT.md) (gates on the music's beat, fits play the melody).
