@@ -106,3 +106,11 @@ real, once the Play Console account exists:
 Fair-play rules the code follows: cosmetics and comfort only, a parental gate before every purchase, no offers during a run
 or in the first session, at most one contextual offer a day, and Google Play decides what you own (refunds take perks away).
 
+## When the app goes live
+
+- Set the app's Google Play address in `web/snug.html` (`PLAY_URL`). Web players on Android phones then see
+  "Get Snug for Android" under the PLAY button after 3 runs (behind the parental gate). Until it's set, the link stays hidden.
+- Daily Challenge #1 is 18 Nov 2026 (`DC_EPOCH`). To start numbering at launch day instead, change that one date.
+- Seasonal events run by date with no server: Winter Fest (1 Dec – 7 Jan), Festival of Colours (March),
+  Summer Splash (15 Jun – 15 Jul) and Spooky Season (20 Oct – 2 Nov). Preview one with `?event=winter`.
+

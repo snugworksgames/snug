@@ -12,11 +12,23 @@
 
   window.SNUG_SHARE_BASE = CFG.shareBase;
 
-  // ---- share sheet ----
-  if (P.Share && !navigator.share) {
+  // ---- share sheet (text, link, and the result picture) ----
+  // A picture is saved to the app's cache folder first, because Android's share sheet shares files by address.
+  if (P.Share) {
+    var FS = P.Filesystem;
+    var toBase64 = function (f) {
+      return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(String(r.result).split(",")[1]); }; r.onerror = rej; r.readAsDataURL(f); });
+    };
+    navigator.canShare = function (d) { return !!d && (!d.files || (!!FS && d.files.length > 0)); };
     navigator.share = function (d) {
-      return P.Share.share({ title: d.title, text: d.text, url: d.url, dialogTitle: "Challenge a friend" })
-        .catch(function (e) { var err = new Error("share cancelled"); err.name = "AbortError"; throw err; });
+      var send = function (files) {
+        return P.Share.share({ title: d.title, text: d.text, url: files ? undefined : d.url, files: files, dialogTitle: "Challenge a friend" });
+      };
+      var p = d.files && d.files.length && FS
+        ? toBase64(d.files[0]).then(function (b64) { return FS.writeFile({ path: "snug-result.png", data: b64, directory: "CACHE" }); })
+            .then(function (w) { return send([w.uri]); })
+        : send(undefined);
+      return p.catch(function () { var err = new Error("share cancelled"); err.name = "AbortError"; throw err; });
     };
   }
 

@@ -28,7 +28,7 @@ const server = createServer((req, res) => {
   if (!file.startsWith(join(root, "docs")) || !existsSync(file)) { res.writeHead(404); res.end(); return; }
   let data = readFileSync(file);
   if (path.endsWith("index.html")) {
-    data = data.toString().replace("function boot(){", "window.__g=()=>({R,blobR,state,BY,CH,S,squish,flash});function boot(){");
+    data = data.toString().replace("function boot(){", "window.__g=()=>({R,blobR,state,BY,CH,S,squish,flash,shareCard});function boot(){");
   }
   res.writeHead(200, { "content-type": TYPES[extname(file)] || "application/octet-stream" });
   res.end(data);
@@ -58,8 +58,9 @@ check(failures0.length === 0, failures0[0] || "no code hidden after a // comment
   check(ok, `no API keys or signing keys committed (${out.split("\n")[0]})`); }
 const shot = async (page, name) => { if (shots) await page.screenshot({ path: join(shots, name + ".png") }); };
 
-async function open(browser, url, save) {
-  const ctx = await browser.newContext({ ...devices["iPhone 13"], deviceScaleFactor: 1 });
+async function open(browser, url, save, { device = "iPhone 13", init } = {}) {
+  const ctx = await browser.newContext({ ...devices[device], deviceScaleFactor: 1 });
+  if (init) await ctx.addInitScript(init);
   if (save) await ctx.addInitScript((s) => { if (!localStorage.getItem("snug.v1")) localStorage.setItem("snug.v1", JSON.stringify(s)); }, save);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
@@ -157,6 +158,10 @@ check(res.score === res.real && res.real > 0, `results show the final score afte
 check(await page.evaluate(() => ![...document.querySelectorAll(".toast")].some((t) => /Mission|Level/.test(t.textContent))),
   `mission and level rewards sit inside the results panel, not over the banner (${await page.evaluate(() => document.querySelectorAll("#oRew .rew").length)} shown)`);
 check(/MEDAL/.test(res.medal), `a medal is shown (${res.medal.trim()})`);
+const card = await page.evaluate(() => { const c = window.__g().shareCard; return c ? { kind: c.kind, type: c.file.type, size: c.file.size } : null; });
+check(card && card.kind === "run" && card.type === "image/png" && card.size > 20000, `a result picture is ready to share (${card ? Math.round(card.size / 1024) + " KB" : "none"})`);
+check(await page.evaluate(() => document.getElementById("bShare").classList.contains("hero")), "after a new best, the share button grows and invites sharing");
+check(await page.locator("#bApp").isHidden(), "no Android app link on an iPhone");
 // Sharing sits behind a parental gate: a wrong answer shares nothing, the right one goes through.
 await page.click("#bShare"); await page.waitForTimeout(400);
 const gate = async () => page.evaluate(() => { const q = document.querySelector(".gateq"); if (!q) return null;
@@ -227,6 +232,36 @@ if (await page.locator(".linkbox").isVisible()) { await shot(page, "share-link")
   await st.context().close();
 }
 
+// 2d. Seasonal event (Winter Fest preview): banner, event missions, and finishing them earns the Santa hat
+{
+  const ev = await open(browser, `${base}?event=winter`, rich);
+  check(/Winter Fest · \d+ days left/.test(await ev.locator("#evT").textContent()) && await ev.locator("#tagline").isHidden(), "during Winter Fest the home screen shows its banner");
+  await ev.click("#bEv"); await ev.waitForTimeout(400);
+  check(await ev.evaluate(() => document.querySelectorAll(".mis").length) === 9, "the missions panel adds three Winter Fest missions");
+  await ev.evaluate(() => document.querySelectorAll(".modal").forEach((m) => m.remove()));
+  await ev.evaluate(() => { const S = window.__g().S; S.ev = { key: "winter-" + new Date().getFullYear(), p: { eGates: 299, eSqueeze: 39, eDaily: 5 }, done: { eDaily: true } }; });
+  await startByTap(ev);
+  const eb = await ev.locator("#cv").boundingBox(); await ev.mouse.move(eb.x + eb.width / 2, eb.y + eb.height * 0.45); await ev.mouse.down();   // gate 1 squeezes at full size
+  await ev.waitForFunction(() => window.__g().state !== "play", null, { timeout: 30000 }); await ev.mouse.up();
+  if (await ev.locator("#rvNo").isVisible().catch(() => false)) await ev.click("#rvNo");
+  await ev.waitForFunction(() => window.__g().state === "over"); await ev.waitForTimeout(1300);
+  const eh = await ev.evaluate(() => ({ hat: window.__g().S.hat, rew: document.getElementById("oRew").textContent }));
+  check(eh.hat === "santa" && /Santa hat unlocked/.test(eh.rew), `finishing the Winter Fest missions earns the Santa hat (${eh.rew.trim()})`);
+  await ev.context().close();
+}
+// 2e. Web on an Android phone: a link to the app after 3 runs, only when a Play address is set
+{
+  const an = await open(browser, base, rich, { device: "Pixel 7", init: () => { window.SNUG_PLAY_URL = "https://play.google.com/store/apps/details?id=com.snugworks.snug"; } });
+  const ab = await an.locator("#cv").boundingBox(); await an.mouse.move(ab.x + ab.width / 2, ab.y + ab.height * 0.74); await an.mouse.down();   // press the blob: starts the run and keeps holding
+  await an.waitForFunction(() => window.__g().state !== "play", null, { timeout: 30000 }); await an.mouse.up();
+  if (await an.locator("#rvNo").isVisible().catch(() => false)) await an.click("#rvNo");
+  await an.waitForFunction(() => window.__g().state === "over"); await an.waitForTimeout(900);
+  check(await an.locator("#bApp").isVisible(), "web players on Android see 'Get Snug for Android' (behind the parental gate)");
+  await an.click("#bApp", { force: true }); await an.waitForTimeout(300);
+  check(await an.locator(".gateq").isVisible(), "the app link asks a grown-up first");
+  await an.context().close();
+}
+
 // 3. Pause
 await page.click("#bRetry", { force: true }); await page.waitForTimeout(600);
 await page.click("#bPause"); await page.waitForTimeout(300);
@@ -268,6 +303,8 @@ await mg.context().close();
 const seed = 424242, target = 55;
 const a = await open(browser, `${base}?c=${seed}-${target}`, rich);
 check(await a.locator(".chalscore").isVisible(), "challenge link opens the challenge card");
+const gift = await a.evaluate(() => ({ coins: window.__g().S.coins, welcomed: window.__g().S.welcomed, card: document.querySelector(".modal").textContent }));
+check(gift.welcomed && gift.coins === 2050 && /Welcome gift/.test(gift.card), `a friend's first challenge link brings a welcome gift (+50 coins, now ${gift.coins})`);
 await shot(a, "challenge-card");
 await a.click("[data-go]"); await a.waitForTimeout(300);
 await startByTap(a);

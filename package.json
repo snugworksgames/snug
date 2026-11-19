@@ -10,6 +10,7 @@
     "@capacitor-community/admob": "8.2.1",
     "@capacitor/android": "8.5.3",
     "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.5",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/share": "8.0.1",
     "@capgo/native-purchases": "8.9.6"

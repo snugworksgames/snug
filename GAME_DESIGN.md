@@ -11,6 +11,13 @@
 > The web build shows no ads; real ads arrive with the store app (see [LAUNCH_PLAN.md](LAUNCH_PLAN.md)).
 > The Unity prototype in `unity/` covers only the original core rules and is not kept in sync.
 
+**Growth (build 17)**
+- **Result picture**: a 1080×1350 card (logo, the blob in its style and hat, score, medal, zone; the colored grid for the Daily) is drawn as soon as results show and shared as an image where the device allows, otherwise as text and a link.
+- **Big moments**: on a new best, a Diamond medal or a newly discovered zone, the share button grows with "Show your friends!".
+- **Welcome gift**: the first challenge or Daily link a device opens gives +50 coins, once.
+- **Seasonal events**: date windows in the code with three event missions and an event-only hat each (Santa hat for Winter Fest, with snowfall; Flowers, Sun hat, Witch hat).
+- **Web to app**: Android web players see a link to the app after 3 runs, once `PLAY_URL` is set.
+
 **Long-term goals (build 16)**: the shop used to run out around day 10 (4,040 coins of skins and hats against roughly 400 coins a day).
 - **Fire trails** (coin sink): 6 trails from 400 to 1,200 coins (4,700 total). They stream behind the blob from ×2 up, fully while on fire. Not part of Snug Plus, so coins keep their value.
 - **Skin mastery**: Perfects, Squeezes and Smashes made while wearing a skin unlock its Pastel (100), Deep (300) and Shiny (700) styles.
